@@ -21,10 +21,12 @@ end
 
 -- A file for the Kernel
 ---@class Kernel.File
----@field kind "memory"|"disk"
+---@field kind "memory"|"disk"|"stream"
 ---@field memory string
 ---@field cursor number
 ---@field handle number
+---@field writer fun(content: string)
+---@field reader fun(n: number?): string
 ---@field mode string
 
 ---@return Kernel.File?, string?
@@ -51,6 +53,16 @@ function gio.new(memory, mode)
     }
 end
 
+function gio.newStream(writer, reader, readOnly)
+    local mode = readOnly and "r" or "rw"
+
+    return {
+        kind = "stream",
+        writer = writer,
+        reader = reader,
+    }
+end
+
 ---@param file Kernel.File
 function gio.close(file)
     if file.kind == "disk" then
@@ -62,7 +74,7 @@ end
 ---@param memory string
 function gio.write(file, memory)
     if file.kind == "disk" then
-        component.invoke(diskID, "write", file.handle, memory)
+        return component.invoke(diskID, "write", file.handle, memory)
     elseif file.kind == "memory" then
         if string.contains(file.mode, "a") then
             -- Append sucks
@@ -73,6 +85,10 @@ function gio.write(file, memory)
         elseif string.contains(file.mode, "w") then
             file.memory = file.memory .. memory
             file.cursor = file.cursor + #memory
+        end
+    elseif file.kind == "stream" then
+        if file.mode == "rw" then
+            file.writer(memory)
         end
     end
 end
@@ -96,6 +112,8 @@ function gio.read(file, amount)
             local chunk = string.sub(file.memory, file.cursor+1)
             file.cursor = #file.memory
             return chunk
+        elseif file.kind == "stream" then
+            return file.reader()
         end
     end
 
@@ -105,5 +123,7 @@ function gio.read(file, amount)
         local chunk = string.sub(file.memory, file.cursor+1, file.cursor+amount)
         file.cursor = file.cursor + #chunk
         return chunk
+    elseif file.kind == "stream" then
+        return file.reader(amount)
     end
 end
