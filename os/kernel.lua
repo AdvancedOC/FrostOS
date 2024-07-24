@@ -25,5 +25,6 @@ if not success then
 end
 
 while true do
-  coroutine.yield()
+--   coroutine.yield()
+  Events.process(0.01)
 end

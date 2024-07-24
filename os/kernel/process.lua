@@ -84,6 +84,40 @@ function Process:initEnvironment()
         end
     end
 
+    namespace.assert = assert
+    namespace.error = error
+    namespace.getmetatable = getmetatable
+    namespace.ipairs = ipairs
+    namespace.load = load
+    namespace.next = next
+    namespace.pairs = pairs
+    namespace.pcall = pcall
+    namespace.rawequal = rawequal
+    namespace.rawget = rawget
+    namespace.rawlen = rawlen
+    namespace.rawset = rawset
+    namespace.select = select
+    namespace.setmetatable = setmetatable
+    namespace.tonumber = tonumber
+    namespace.tostring = tostring
+    namespace.type = type
+    namespace.xpcall = xpcall
+    namespace.checkArg = checkArg
+
+    if coroutine then namespace.coroutine = table.copy(coroutine) end
+    if math then namespace.math = table.copy(math) end
+    if table then namespace.table = table.copy(table) end
+    if bit32 then namespace.bit32 = table.copy(bit32) end
+    if string then namespace.string = table.copy(string) end
+    if unicode then namespace.unicode = table.copy(unicode) end
+    if utf8 then namespace.utf8 = table.copy(utf8) end
+
+    if os then namespace.os = table.copy(os) end
+
+    namespace._G = namespace
+
+    namespace._VERSION = computer.getArchitecture()
+
     -- Important OS stuff
     pio.registerFor(self)
 
