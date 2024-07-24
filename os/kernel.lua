@@ -4,6 +4,7 @@ dofile("os/kernel/utils.lua")
 dofile("os/kernel/gio.lua")
 dofile("os/kernel/pio.lua")
 dofile("os/kernel/process.lua")
+dofile("os/kernel/events.lua")
 
 for _, driver in ipairs(gio.list("/os/drivers")) do
   table.insert(AllDrivers, gio.dofile("/os/drivers/" .. driver))
