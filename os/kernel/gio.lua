@@ -128,8 +128,22 @@ function gio.read(file, amount)
     end
 end
 
----@return (fun(): string?)?, string?
+---@return string[]?, string?
 function gio.list(directory)
     local driveID, truePath = getPathInfo(directory)
     return component.invoke(driveID, "list", truePath)
+end
+
+function gio.dofile(path,...)
+    local file,err = gio.open("path", "r")
+
+    if not file then error(err) end
+
+    local data,derr = gio.read(file)
+
+    if not data then error(derr) end
+
+    gio.close(file)
+
+    return load(data or "", path, "bt", _G)(...)
 end
