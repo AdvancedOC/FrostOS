@@ -87,6 +87,10 @@ function Process:initEnvironment()
     -- Important OS stuff
     pio.registerFor(self)
 
+    for _, init in ipairs(AllDrivers) do
+        init(self)
+    end
+
     self:preload("io", "/os/lib/io.lua")
 end
 
