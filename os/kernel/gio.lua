@@ -11,6 +11,9 @@ local symtab = {}
 
 ---@return string, string
 local function getPathInfo(path)
+    if path:sub(1,1) ~= "/" then
+    error(path)
+    end
     assert(path:sub(1, 1) == "/")
     local diskID, diskPath = computer.getBootAddress(), path
 
@@ -106,7 +109,8 @@ function gio.read(file, amount)
             local buf = ""
             repeat
                 local data, err = component.invoke(file.diskID, "read", file.handle, math.huge)
-                assert(data or not err, err)
+                -- assert(data or not err, err)
+                if err then return nil,err end
                 buf = buf .. (data or "")
             until not data
             return buf
@@ -137,7 +141,7 @@ function gio.list(directory)
 end
 
 function gio.dofile(path,...)
-    local file,err = gio.open("path", "r")
+    local file,err = gio.open(path, "r")
 
     if not file then error(err) end
 
@@ -147,5 +151,5 @@ function gio.dofile(path,...)
 
     gio.close(file)
 
-    return load(data or "", path, "bt", _G)(...)
+    return load(data or "", "=" .. path, "bt", _G)(...)
 end
