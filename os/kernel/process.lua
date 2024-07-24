@@ -1,6 +1,7 @@
 ---@class Kernel.Process
+---@param name number
 ---@field pid number
----@field admin boolean
+---@field ring number
 ---@field cwd string
 ---@field files {[number]: Kernel.File}
 ---@field env {[string]: string}
@@ -13,19 +14,21 @@ Process.__index = Process
 local allProcs = {}
 local npid = 0
 
+---@param name string
 ---@param cwd string
 ---@param stdout? Kernel.File
 ---@param stdin? Kernel.File
 ---@param stderr? Kernel.File
 ---@param env? {[string]: string}
----@param admin? boolean
+---@param ring? number
 ---@return Kernel.Process
-function Process.spawn(cwd, stdout, stdin, stderr, env, admin)
+function Process.spawn(name, cwd, stdout, stdin, stderr, env, ring)
     local pid = npid
     npid = npid + 1
     local process = setmetatable({
+        name = name,
         cwd = cwd,
-        admin = admin or false,
+        ring = ring or 3,
         files = {
             [0] = stdout or gio.new("", "a"),
             [1] = stdin or gio.new("", "r"),
@@ -85,6 +88,13 @@ function Process:initEnvironment()
     self:preload("io", "/os/lib/io.lua")
 end
 
+---@param file Kernel.File
+---@return boolean, any
+function Process:exec(file, ...)
+    local code = gio.read(file)
+    return pcall(load(code, self.name, "bt", self.namespace), ...)
+end
+
 function Process:defineSyscall(name, callback)
     self.syscalls[name] = function(...)
         return callback(self, ...)
@@ -127,3 +137,6 @@ function Process.kill(proc)
     -- Remove the proc
     allProcs[proc.pid] = nil
 end
+
+-- Init is PID 0, (guaranteed)
+Init = Process.spawn("krnl", "/", nil, nil, nil, {}, 0)
