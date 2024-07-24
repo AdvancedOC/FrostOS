@@ -11,7 +11,7 @@ Process = {}
 Process.__index = Process
 
 ---@type {[number]: Kernel.Process}
-local allProcs = {}
+allProcs = {}
 local npid = 0
 
 ---@param name string
