@@ -1,5 +1,5 @@
 ---@class Kernel.Process
----@param name number
+---@field name number
 ---@field pid number
 ---@field ring number
 ---@field cwd string
