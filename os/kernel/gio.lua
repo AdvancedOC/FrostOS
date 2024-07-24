@@ -25,6 +25,7 @@ end
 ---@field memory string
 ---@field cursor number
 ---@field handle number
+---@field diskID string
 ---@field writer fun(content: string)
 ---@field reader fun(n: number?): string
 ---@field mode string
@@ -39,6 +40,7 @@ function gio.open(path, mode)
     return {
         kind = "disk",
         handle = handle,
+        diskID = diskID,
         mode = mode,
     }
 end
@@ -66,7 +68,7 @@ end
 ---@param file Kernel.File
 function gio.close(file)
     if file.kind == "disk" then
-        component.invoke(diskID, "close", file.handle)
+        component.invoke(file.diskID, "close", file.handle)
     end
 end
 
@@ -74,7 +76,7 @@ end
 ---@param memory string
 function gio.write(file, memory)
     if file.kind == "disk" then
-        return component.invoke(diskID, "write", file.handle, memory)
+        return component.invoke(file.diskID, "write", file.handle, memory)
     elseif file.kind == "memory" then
         if string.contains(file.mode, "a") then
             -- Append sucks
@@ -103,7 +105,7 @@ function gio.read(file, amount)
         if file.kind == "disk" then
             local buf = ""
             repeat
-                local data, err = gio.read(file, math.huge)
+                local data, err = component.invoke(file.diskID, "read", file.handle, math.huge)
                 assert(data or not err, err)
                 buf = buf .. (data or "")
             until not data
@@ -118,7 +120,7 @@ function gio.read(file, amount)
     end
 
     if file.kind == "disk" then
-        return gio.read(file, math.huge)
+        return component.invoke(file.diskID, "read", file.handle, amount)
     elseif file.kind == "memory" then
         local chunk = string.sub(file.memory, file.cursor+1, file.cursor+amount)
         file.cursor = file.cursor + #chunk
