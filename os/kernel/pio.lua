@@ -5,7 +5,7 @@ local function protectedSort(a, b)
 end
 
 local function protectionApplies(path, info)
-  return strings.startswith(path, info.path .. "/") or path == info.path
+  return string.startswith(path, info.path .. "/") or path == info.path
 end
 
 local function isModeProblematic(mode, path, ring)
@@ -52,7 +52,7 @@ pio = {}
 
 function pio.giveFile(process, file)
   local i = 3
-  while process.files[i] ~= nil then
+  while process.files[i] ~= nil do
     i = i + 1
   end
   process.files[i] = file
