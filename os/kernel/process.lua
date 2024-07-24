@@ -85,6 +85,8 @@ function Process:initEnvironment()
     end
 
     -- Important OS stuff
+    pio.registerFor(self)
+
     self:preload("io", "/os/lib/io.lua")
 end
 
