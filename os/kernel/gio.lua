@@ -153,3 +153,23 @@ function gio.dofile(path,...)
 
     return load(data or "", "=" .. path, "bt", _G)(...)
 end
+
+function gio.remove(path)
+    local diskID, truePath = getPathInfo(path)
+    return component.invoke(diskID, "remove", truePath)
+end
+
+function gio.size(path)
+    local diskID, truePath = getPathInfo(path)
+    return component.invoke(diskID, "size", truePath)
+end
+
+function gio.mkdir(path)
+    local diskID, truePath = getPathInfo(path)
+    return component.invoke(diskID, "makeDirectory", truePath)
+end
+
+function gio.exists(path)
+    local diskID, truePath = getPathInfo(path)
+    return component.invoke(diskID, "exists", truePath)
+end

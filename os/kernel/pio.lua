@@ -50,6 +50,27 @@ addProtectedPath("/os", {
 
 pio = {}
 
+function pio.canonical(process, path)
+  if path:sub(1, 1) ~= "/" then
+    return pio.canonical(process, process.cwd .. "/" .. path)
+  end
+
+  local parts = string.split(process, "/")
+  local left = {}
+
+  for i=1,#parts do
+    if parts[i] == "." then
+      -- Do nothing
+    elseif parts[i] == ".." then
+      left[#left] = nil
+    else
+      left[#left+1] = parts[i]
+    end
+  end
+
+  return table.concat(left, "/")
+end
+
 function pio.giveFile(process, file)
   local i = 3
   while process.files[i] ~= nil do
@@ -60,6 +81,7 @@ function pio.giveFile(process, file)
 end
 
 function pio.open(process, path, mode)
+  path = pio.canonical(process, path)
   mode = mode or "r"
   if isModeProblematic(mode, path, process.ring) then return nil, "Operation not permitted" end
   local file, err = gio.open(process, mode)
