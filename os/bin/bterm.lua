@@ -8,7 +8,7 @@ local screens = syscalls.graphics_getScreens()
 
 local gpucount = syscalls.graphics_gpuCount()
 
-local truecount = (#screens < gpucount) and #screens or gpucount -- if you have more screens than gpus you can't, and you also don't need multiple gpus on a single screen
+local truecount = math.min(#screens,gpucount) -- if you have more screens than gpus you can't, and you also don't need multiple gpus on a single screen
 
 for i = 1,truecount do
     syscalls.graphics_bind(screens[i],i) -- bind gpus to screens
@@ -34,7 +34,7 @@ local function addLine(line)
         table.remove(lines,1)
 
         for i = 1,truecount do
-            syscalls.graphics_copy(1,2,w,h-1,0,-1,i)
+            syscalls.graphics_copy(1,2,w,h-1,0,-1,i) -- this is way faster than redrawing all the lines, and the gpu is slow in OC
 
             syscalls.graphics_set(1,h,line,i)
         end

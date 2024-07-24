@@ -1,9 +1,9 @@
 -- Kernel Events. SUPER complex.
 Events = {}
-Events.queues = {}
+Events.queues = {} --kwiwis
 
 function Events.process(timeout)
-    local rawdata = {computer.pullSignal(timeout)}
+    local rawdata = { computer.pullSignal(timeout) }
     if #rawdata == 0 then
         return -- No signal, cuz we timed out
     end
@@ -12,6 +12,9 @@ function Events.process(timeout)
 
     Events.queues[name] = Events.queues[name] or {}
     table.insert(Events.queues[name], rawdata)
+    while #Events.queues[name] > 20 do
+        table.remove(Events.queues[name], 1)
+    end
 end
 
 function Events.pull(name, timeout)

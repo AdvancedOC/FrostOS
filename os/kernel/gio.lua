@@ -164,6 +164,29 @@ function gio.size(path)
     return component.invoke(diskID, "size", truePath)
 end
 
+---@param file Kernel.File
+---@param whence? "cur"|"set"|"end"
+---@param pos? number
+---@return number, string?
+function gio.seek(file, whence, pos)
+    whence = whence or "cur"
+    pos = pos or 0
+    if file.kind == "disk" then
+        return component.invoke(file.diskID, "seek", file.handle, whence, pos)
+    elseif file.kind == "memory" then
+        if whence == "set" then
+            file.cursor = math.min(pos, #file.memory)
+        elseif whence == "end" then
+            file.cursor = math.max(0, #file.memory - pos)
+        elseif whence == "cur" then
+            file.cursor = math.min(file.cursor + pos, #file.memory)
+        end
+        return file.cursor
+    else
+        return 0, "gio_seek: Unsupported file type"
+    end
+end
+
 function gio.mkdir(path)
     local diskID, truePath = getPathInfo(path)
     return component.invoke(diskID, "makeDirectory", truePath)

@@ -97,6 +97,51 @@ function pio.close(process, descriptor)
   process.files[descriptor] = nil
 end
 
+function pio.remove(process, path)
+    path = pio.canonical(process, path)
+    if isModeProblematic("w", path, process.ring) then return nil, "Operation not permitted" end
+    return gio.remove(path)
+end
+
+function pio.createDir(process, directory)
+    directory = pio.canonical(process, directory)
+    if isModeProblematic("w", directory, process.ring) then return "Operation not permitted" end
+    return gio.mkdir(directory)
+end
+
+function pio.listDir(process, directory)
+    directory = pio.canonical(process, directory)
+    if isModeProblematic("r", directory, process.ring) then return "Operation not permitted" end
+    return gio.list(directory)
+end
+
+function pio.exists(process, path)
+    path = pio.canonical(process, path)
+    return gio.exists(path)
+end
+
+function pio.seek(process, descriptor, whence, off)
+    if not process.files[descriptor] then
+      return 0, "Bad file descriptor"
+    end
+    local file = process.files[descriptor]
+    return gio.seek(file, whence, off)
+end
+
+function pio.write(process, descriptor, memory)
+    if not process.files[descriptor] then
+      return "Bad file descriptor"
+    end
+    return gio.write(process.files[descriptor], memory)
+end
+
+function pio.read(process, descriptor, amount)
+    if not process.files[descriptor] then
+      return nil, "Bad file descriptor"
+    end
+    return gio.read(process.files[descriptor], amount)
+end
+
 function pio.kill(process, pid)
   if process.pid == pid then
     error("Process " .. pid .. " commited suicide")
@@ -117,5 +162,13 @@ end
 function pio.registerFor(process)
   process:defineSyscall("fopen", pio.open)
   process:defineSyscall("fclose", pio.close)
+  process:defineSyscall("fseek", pio.seek)
+  process:defineSyscall("fexists", pio.exists)
+  process:defineSyscall("dirlist", pio.listDir)
+  process:defineSyscall("diropen", pio.createDir)
+  process:defineSyscall("fexists", pio.exists)
+  process:defineSyscall("fremove", pio.remove)
+  process:defineSyscall("fwrite", pio.write)
+  process:defineSyscall("fread", pio.read)
   process:defineSyscall("pkill", pio.kill)
 end
