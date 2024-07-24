@@ -52,13 +52,9 @@ function Process:initEnvironment()
         "?/init.lua",
         "/usr/lib/?.lua",
         "/usr/lib/?/init.lua",
+        "/os/lib/?.lua",
+        "/os/lib/?/init.lua",
     }
-
-    -- Only care to check if we can
-    if self.admin then
-        table.insert(loadpath, "/os/lib/?.lua")
-        table.insert(loadpath, "/os/lib/?/init.lua")
-    end
 
     -- Minimal Lua library we can provide
     namespace.package = {
