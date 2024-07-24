@@ -127,3 +127,9 @@ function gio.read(file, amount)
         return file.reader(amount)
     end
 end
+
+---@return (fun(): string?)?, string?
+function gio.list(directory)
+    local driveID, truePath = getPathInfo(directory)
+    return component.invoke(driveID, "list", truePath)
+end
