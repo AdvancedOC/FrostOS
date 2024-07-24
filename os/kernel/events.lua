@@ -3,7 +3,10 @@ Events = {}
 Events.queues = {}
 
 function Events.process(timeout)
-    local rawdata = {computer.pullSignal()}
+    local rawdata = {computer.pullSignal(timeout)}
+    if #rawdata == 0 then
+        return -- No signal, cuz we timed out
+    end
     local name = rawdata[1]
     table.remove(rawdata, 1)
 
