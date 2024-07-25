@@ -1,4 +1,5 @@
 local syscalls = require("syscalls")
+local process = require("process")
 
 -- unimplemented lol
 
@@ -35,4 +36,53 @@ local function parseCommand(cmd)
 	end
 
 	if #current > 0 then args[#args+1] = current end
+
+	return args
+end
+
+local function which(command)
+    local shellPath = "/usr/bin/?.lua:/usr/bin/?/init.lua:/os/bin/?.lua:/os/bin/?/init.lua"
+    local shellConfig = "/\n:\n?\n"
+
+    return package.pathOf(command, shellConfig, shellPath)
+end
+
+-- TODO: make io use separate buffers gosh darn it
+io.stdout.buflimit = 0
+
+while true do
+	local wd = process.cwd()
+
+	io.write(io.stdout, wd .. " > ")
+	local line = io.read(io.stdin, "l")
+
+	local parsed = parseCommand(line)
+
+	if #parsed >= 1 then
+		local program = which(parsed[1])
+		if program then
+    		local progargs = {}
+
+    		for i = 1,#parsed do
+    			progargs[i-1] = parsed[i]
+    		end
+
+			local prog = process.spawn("Program " .. program, {
+    			[0] = io.stdout.fd,
+    			[1] = io.stdin.fd,
+    			[2] = io.stderr.fd,
+    		}, nil, wd, 3)
+            process.exec(prog, program, progargs)
+
+    		while process.status(prog) ~= "dead" do
+    		  coroutine.yield()
+    		end
+
+      		process.kill(prog)
+        else
+			print("Unknown command: " .. parsed[1])
+		end
+	end
+
+	coroutine.yield()
 end

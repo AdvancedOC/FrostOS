@@ -58,13 +58,12 @@ function gio.new(memory, mode)
     }
 end
 
-function gio.newStream(writer, reader, readOnly)
-    local mode = readOnly and "r" or "rw"
-
+function gio.newStream(writer, reader, mode)
     return {
         kind = "stream",
         writer = writer,
         reader = reader,
+        mode = mode,
     }
 end
 
@@ -92,7 +91,7 @@ function gio.write(file, memory)
             file.cursor = file.cursor + #memory
         end
     elseif file.kind == "stream" then
-        if file.mode == "rw" then
+        if string.contains(file.mode or "r", "w") then
             file.writer(memory)
         end
     end
@@ -195,4 +194,12 @@ end
 function gio.exists(path)
     local diskID, truePath = getPathInfo(path)
     return component.invoke(diskID, "exists", truePath)
+end
+
+function gio.pathType(path)
+    if symtab[path] then return "symlink" end
+    if fstab[path] then return "mount" end
+    if not gio.exists(path) then return "none" end
+    local driveID, path = getPathInfo(path)
+    return component.invoke(driveID, "isDirectory", path) and "directory" or "file"
 end

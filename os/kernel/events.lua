@@ -1,6 +1,7 @@
 -- Kernel Events. SUPER complex.
 Events = {}
 Events.queues = {} --kwiwis
+Events.callbacks = {}
 
 function Events.process(timeout)
     local rawdata = { computer.pullSignal(timeout) }
@@ -15,6 +16,24 @@ function Events.process(timeout)
     while #Events.queues[name] > 20 do
         table.remove(Events.queues[name], 1)
     end
+
+    local callbacks = Events.callbacks[name]
+    if not callbacks then
+        return
+    end
+    for i=1,#callbacks do
+        callbacks[i](table.unpack(rawdata))
+    end
+end
+
+function Events.addCallback(name, callback)
+    Events.callbacks[name] = Events.callbacks[name] or {}
+    table.insert(Events.callbacks[name], callback)
+end
+
+function Events.inQueue(name)
+    if not Events.queues[name] then return false end
+    return #Events.queues[name] > 0
 end
 
 function Events.pull(name, timeout)

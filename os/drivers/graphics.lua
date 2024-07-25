@@ -32,6 +32,8 @@ do
     end
 end
 
+local gpuResolutions = {}
+
 -- everything is a local function because ram usage is important in OpenComputers
 
 local function graphics_gpuCount()
@@ -44,8 +46,17 @@ local function graphics_getScreens()
     return screens
 end
 
+local function graphics_getGPUID(proc, uuid)
+	for i = 1,#gpus do
+		if gpus[i] == uuid then return i end
+	end
+end
+
 local function graphics_bind(proc, screenAddr, gpuID)
     gpuID = gpuID or defaultGPU
+
+    gpuResolutions[gpuID] = nil -- can't trust old cache
+
     return ci(gpus[gpuID],"bind",screenAddr)
 end
 local function graphics_getScreen(proc, gpuID)
@@ -55,7 +66,12 @@ end
 
 local function graphics_getResolution(proc, gpuID)
     gpuID = gpuID or defaultGPU
-    return ci(gpus[gpuID],"getResolution")
+
+	if not gpuResolutions[gpuID] then
+		gpuResolutions[gpuID] = {ci(gpus[gpuID],"getResolution")}
+	end
+
+    return table.unpack(gpuResolutions[gpuID])
 end
 local function graphics_maxResolution(proc, gpuID)
     gpuID = gpuID or defaultGPU
@@ -63,7 +79,14 @@ local function graphics_maxResolution(proc, gpuID)
 end
 local function graphics_setResolution(proc, w, h, gpuID)
     gpuID = gpuID or defaultGPU
-    return ci(gpus[gpuID],"setResolution",w,h)
+
+    local succ,err = ci(gpus[gpuID],"setResolution",w,h)
+
+    if succ then
+    	gpuResolutions[gpuID] = {w,h}
+    end
+
+    return succ,err
 end
 
 local function graphics_getBackground(proc, gpuID)
@@ -104,6 +127,9 @@ end
 ---@param process Kernel.Process
 return function (process)
     -- custom things
+
+    process:defineSyscall("graphics_getGPUID", graphics_getGPUID)
+
     process:defineSyscall("graphics_gpuCount", graphics_gpuCount)
     if process.ring < 3 then process:defineSyscall("graphics_setDefaultGPU", graphics_setDefaultGPU) end
     process:defineSyscall("graphics_getScreens", graphics_getScreens)

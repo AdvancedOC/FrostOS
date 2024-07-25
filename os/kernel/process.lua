@@ -1,4 +1,5 @@
 ---@class Kernel.Process
+---@field parent? Kernel.Process
 ---@field name number
 ---@field pid number
 ---@field ring number
@@ -7,6 +8,8 @@
 ---@field env {[string]: string}
 ---@field namespace table
 ---@field syscalls {[string]: function}
+---@field threads {[number]: thread}
+---@field children {[number]: Kernel.Process}
 Process = {}
 Process.__index = Process
 
@@ -14,6 +17,7 @@ Process.__index = Process
 allProcs = {}
 local npid = 0
 
+---@param parent? Kernel.Process
 ---@param name string
 ---@param cwd string
 ---@param stdout? Kernel.File
@@ -22,10 +26,11 @@ local npid = 0
 ---@param env? {[string]: string}
 ---@param ring? number
 ---@return Kernel.Process
-function Process.spawn(name, cwd, stdout, stdin, stderr, env, ring)
+function Process.spawn(parent, name, cwd, stdout, stdin, stderr, env, ring)
     local pid = npid
     npid = npid + 1
     local process = setmetatable({
+        parent = parent,
         name = name,
         cwd = cwd,
         ring = ring or 3,
@@ -38,6 +43,8 @@ function Process.spawn(name, cwd, stdout, stdin, stderr, env, ring)
         syscalls = {},
         env = env or {},
         namespace = {},
+        threads = {},
+        children = {},
     }, Process)
 
     allProcs[pid] = process
@@ -57,6 +64,10 @@ function Process:initEnvironment()
         "/usr/lib/?/init.lua",
         "/os/lib/?.lua",
         "/os/lib/?/init.lua",
+        "/usr/bin/?.lua",
+        "/usr/bin/?/init.lua",
+        "/os/bin/?.lua",
+        "/os/bin/?/init.lua",
     }
 
     -- Minimal Lua library we can provide
@@ -69,20 +80,6 @@ function Process:initEnvironment()
         },
         path = table.concat(loadpath, ';'),
     }
-
-    function namespace.require(...)
-        local path = ...
-        if namespace.package.loaded[path] then
-            return namespace.package.loaded[path]
-        end
-
-        if namespace.package.preload[path] then
-            local res = namespace.package.preload[path](...)
-            if res == nil then res = true end
-            namespace.package.loaded[path] = res
-            return res
-        end
-    end
 
     namespace.assert = assert
     namespace.error = error
@@ -103,6 +100,10 @@ function Process:initEnvironment()
     namespace.type = type
     namespace.xpcall = xpcall
     namespace.checkArg = checkArg
+
+    if self.ring <= 2 then
+    	namespace.Events = Events -- ONLY privliged commands, shell and/or environment gets this.
+    end
 
     if coroutine then namespace.coroutine = table.copy(coroutine) end
     if math then namespace.math = table.copy(math) end
@@ -131,8 +132,63 @@ end
 ---@param file Kernel.File
 ---@return boolean, any
 function Process:exec(file, ...)
-    local code = gio.read(file)
-    return pcall(load(code, self.name, "bt", self.namespace), ...)
+    local code, err = gio.read(file)
+    if code == nil then return false, err end
+    local predicted = self:predictThreadID()
+    local func, err = load(code, "=" .. self.name .. " thread" .. predicted, "bt", self.namespace)
+    if func == nil then return false, err end
+    if select("#", ...) == 0 then
+        return true, self:spawnThread(func)
+    end
+    local payload = {...}
+    return true, self:spawnThread(function() func(table.unpack(payload)) end)
+end
+
+function Process:predictThreadID()
+    local threadID = 1
+    while self.threads[threadID] ~= nil do
+        threadID = threadID + 1
+    end
+    return threadID
+end
+
+function Process:spawnThread(func)
+    local threadID = self:predictThreadID()
+    self.threads[threadID] = coroutine.create(func)
+    return threadID
+end
+
+---@return thread?
+function Process:getRawThread(id)
+    return self.threads[id]
+end
+
+function Process:resumeThreads()
+    local cleanup
+    for id, thread in pairs(self.threads) do
+        local good, err = coroutine.resume(thread)
+        if not good then
+        	gio.write(self.files[2], err .. "\n" .. debug.traceback(thread) .. "\n")
+         	self:kill()
+         	break
+        end
+        if coroutine.status(thread) == "dead" then
+            -- Mark for cleanup
+            cleanup = cleanup or {}
+            table.insert(cleanup, id)
+        end
+    end
+    if cleanup then
+        for i=1,#cleanup do
+            self.threads[cleanup[i]] = nil
+        end
+    end
+end
+
+-- A process is "over" if all threads are done (except for Init).
+-- Init will kill all threads that are over for it.
+function Process:isProcessOver()
+    return not next(self.threads)
 end
 
 function Process:defineSyscall(name, callback)
@@ -168,15 +224,35 @@ function Process.kill(proc)
         return Process.kill(allProcs[proc])
     end
 
+    -- Designed to not allocate, to attempt to recover from a forkbomb
+
     -- Do NOT close stdout, stdin, stderr. Those are managed by the spawner.
     -- But close all other files the app forgot about
-    for _, file in pairs(proc.files) do
-        gio.close(file)
+    local nextFD = next(proc.files)
+    while nextFD do
+    	gio.close(proc.files[nextFD])
+    	nextFD = next(proc.files, nextFD)
+    end
+
+    -- If we have child processes, we need to kill them. If they are not done, well, we move them to Init and make it Init's problem.
+    local pid = next(proc.children)
+    while pid do
+    	local child = proc.children[pid]
+        if child:isProcessOver() then
+            child:kill() -- Just forget about it
+        else
+            Init.children[pid] = child
+            child.parent = Init
+        end
+        pid = next(proc.children, pid)
     end
 
     -- Remove the proc
+    if proc.parent then
+        proc.parent.children[proc.pid] = nil
+    end
     allProcs[proc.pid] = nil
 end
 
--- Init is PID 0, (guaranteed)
-Init = Process.spawn("krnl", "/", nil, nil, nil, {}, 0)
+-- Init is PID 0, (guaranteed). It has no parent
+Init = Process.spawn(nil, "krnl", "/", nil, nil, nil, {}, 0)

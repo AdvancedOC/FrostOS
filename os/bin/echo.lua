@@ -1,0 +1,3 @@
+local args = ...
+
+io.write(io.stdout, table.concat(args, ' '), '\n')

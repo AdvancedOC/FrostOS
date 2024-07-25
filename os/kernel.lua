@@ -11,13 +11,14 @@ for _, driver in ipairs(gio.list("/os/drivers")) do
 end
 
 -- For now, forcefully run bterm
-local bterm = Process.spawn("bterm", "/", nil, nil, nil, {}, 2)
+local login = Process.spawn(Init, "login", "/", nil, nil, nil, {}, 1)
+Init.children[login.pid] = login
 
-local file = gio.open("/os/bin/bterm.lua")
+local file, err = gio.open("/os/bin/login.lua")
 
-if not file then error("idc") end
+if not file then error(err) end
 
-local success, err = bterm:exec(file)
+local success, err = login:exec(file)
 gio.close(file)
 
 if not success then
@@ -25,6 +26,21 @@ if not success then
 end
 
 while true do
---   coroutine.yield()
-  Events.process(0.01)
+    local zombies
+    for pid, proc in pairs(allProcs) do
+        proc:resumeThreads()
+        if proc.parent == Init and proc:isProcessOver() then
+            zombies = zombies or {}
+            table.insert(zombies, pid)
+        end
+    end
+    if zombies then
+        for i=1,#zombies do
+        	if allProcs[zombies[i]] then
+	            -- And that process was never seen ever again
+	            allProcs[zombies[i]]:kill()
+         	end
+        end
+    end
+	Events.process(0.01)
 end
