@@ -9,6 +9,9 @@ local function protectionApplies(path, info)
 end
 
 local function isModeProblematic(mode, path, ring)
+	if string.contains(mode, "w") or string.contains(mode, "a") then
+		if gio.isPathReadOnly(path) then return true end
+	end
 	for _, info in ipairs(	protectedPaths) do
 		if protectionApplies(path,	info	) then
 			for k, protection in pairs(info.protection) do
@@ -66,12 +69,13 @@ addProtectedPath("/os", {
 pio = {}
 
 function pio.canonical(process, path)
+	if path == "/" then return "/" end
   if path:sub(1, 1) ~= "/" then
     if process.cwd == "/" then return pio.canonical(process, "/" .. path) end
     return pio.canonical(process, process.cwd .. "/" .. path)
   end
 
-  local parts = string.split(path, "/")
+  local parts = string.split(path:sub(2), "/")
   local left = {}
 
   for i=1,#parts do
@@ -84,7 +88,7 @@ function pio.canonical(process, path)
     end
   end
 
-  return table.concat(left, "/")
+  return "/" .. table.concat(left, "/")
 end
 
 function pio.giveFile(process, file)
@@ -127,7 +131,7 @@ end
 
 function pio.listDir(process, directory)
     directory = pio.canonical(process, directory)
-    if isModeProblematic("r", directory, process.ring) then return "Operation not permitted" end
+    if isModeProblematic("r", directory, process.ring) then return nil, "Operation not permitted" end
     return gio.list(directory)
 end
 
@@ -163,12 +167,30 @@ function pio.kind(process, path)
     return gio.pathType(path)
 end
 
+function pio.size(process, path)
+    path = pio.canonical(process, path)
+    if gio.pathType(path) ~= "file" then return nil, "Not a file" end
+    return gio.size(path)
+end
+
+function pio.readonly(process, path)
+    path = pio.canonical(process, path)
+    return gio.isPathReadOnly(path)
+end
+
 function pio.memory(process, buffer, mode)
     return pio.giveFile(process, gio.new(buffer, mode))
 end
 
 function pio.stream(process, writer, reader, mode)
     return pio.giveFile(process, gio.newStream(writer, reader, mode))
+end
+
+function pio.allowed(process, path, ring, mode)
+	mode = mode or "r"
+	ring = ring or process.ring
+	path = pio.canonical(process, path)
+	return not isModeProblematic(mode, path, ring)
 end
 
 function pio.getenv(process, var)
@@ -181,9 +203,15 @@ end
 
 ---@param process Kernel.Process
 function pio.spawn(process, name, fileMappings, environment, cwd, ring)
-	local spaceNeeded = 128*1024
-	if computer.freeMemory() <= spaceNeeded then
-		return nil, "Too many processes"
+	local spaceNeeded = 16*1024
+	if #ProcPool > 0 then
+		spaceNeeded = 1024
+	end
+	if computer.freeMemory() < spaceNeeded then
+		AttemptGC(spaceNeeded)
+		if computer.freeMemory() < spaceNeeded then
+			return nil, "Too many processes"
+		end
 	end
 
     name = name or "Unnamed Process"
@@ -205,7 +233,8 @@ function pio.spawn(process, name, fileMappings, environment, cwd, ring)
 	    end
     end
 
-    local child = Process.spawn(process, name, cwd, files[0], files[1], files[2], environment, ring)
+    local child, err = Process.spawn(process, name, cwd, files[0], files[1], files[2], environment, ring)
+    if not child then return nil, err end
     process.children[child.pid] = child
     return child.pid
 end
@@ -225,12 +254,21 @@ function pio.threadCurrent(process)
     return nil -- This means you are a zombie.
 end
 
-function pio.threadKill(process, thread)
+function pio.threadkill(process, thread)
     if not process.threads[thread] then
-        return "Bad thread ID"
+        return "bad thread id"
     end
-    -- There is no way for a thread to exit "gracefully"
+    -- there is no way for a thread to exit "gracefully"
     process.thread[thread] = nil
+end
+
+function pio.threadRunning(process, thread)
+    if not process.threads[thread] then
+        return false
+    end
+    local thread = process.threads[thread]
+    local status = coroutine.status(thread)
+    return status ~= "dead"
 end
 
 ---@param process Kernel.Process
@@ -284,6 +322,13 @@ function pio.processCWD(process)
     return process.cwd
 end
 
+function pio.changeDirectory(process, cwd)
+	local path = pio.canonical(process, cwd)
+	local pt = gio.pathType(path)
+	if pt ~= "directory" and pt ~= "mount" then return "Not a directory" end
+    process.cwd = path
+end
+
 function pio.getParent(process)
     if process.parent then
         return process.parent.pid
@@ -305,7 +350,7 @@ function pio.getInfo(process, child)
         table.insert(info.children, pid)
     end
     info.status = pio.processStatus(process, child)
-    info.ring = process.ring
+    info.ring = proc.ring
     if process.parent then
         info.parent = process.parent.pid
     end
@@ -344,8 +389,11 @@ function pio.registerFor(process)
   process:defineSyscall("fwrite", pio.write)
   process:defineSyscall("fread", pio.read)
   process:defineSyscall("fkind", pio.kind)
+  process:defineSyscall("fsize", pio.size)
+  process:defineSyscall("freadonly", pio.readonly)
   process:defineSyscall("fmemory", pio.memory)
   process:defineSyscall("fstream", pio.stream)
+  process:defineSyscall("fallowed", pio.allowed)
   process:defineSyscall("pspawn", pio.spawn)
   process:defineSyscall("pexec", pio.exec)
   process:defineSyscall("pstatus", pio.processStatus)
@@ -357,5 +405,11 @@ function pio.registerFor(process)
   process:defineSyscall("pparent", pio.getParent)
   process:defineSyscall("pall", pio.getPids)
   process:defineSyscall("ptree", pio.getChildren)
+  process:defineSyscall("pfind", pio.findProcess)
+  process:defineSyscall("pcd", pio.changeDirectory)
   process:defineSyscall("pkill", pio.kill)
+  process:defineSyscall("tself", pio.threadCurrent)
+  process:defineSyscall("tspawn", pio.threadSpawn)
+  process:defineSyscall("trunning", pio.threadRunning)
+  process:defineSyscall("tkill", pio.threadKill)
 end

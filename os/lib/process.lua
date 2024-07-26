@@ -18,6 +18,10 @@ function process.cwd()
 	return syscalls.pwd()
 end
 
+function process.changeDirectory(path)
+	return syscalls.pcd(path)
+end
+
 function process.spawn(name, files, environment, cwd, ring)
     local fileMappings
     if files then
@@ -59,6 +63,10 @@ function process.children(pid)
 	return syscalls.ptree(pid or process.current())
 end
 
+function process.find(pattern)
+	return syscalls.pfind(pattern)
+end
+
 function process.all()
 	return syscalls.pall()
 end
@@ -77,6 +85,10 @@ function process.envsWith(extra)
 		env[k] = v
 	end
 	return env
+end
+
+function process.exit()
+	return process.kill(process.current())
 end
 
 return process

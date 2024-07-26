@@ -1,2 +1,5 @@
 # make it the max size all the screens support
+echo Running Scute shell
 resize
+mem total
+energy total

@@ -64,8 +64,11 @@ end
 function io.from(descriptor)
     return setmetatable({
         buffer = "",
+        rcache = "",
+        rcacheidx = 1,
         bufidx = 1,
         buflimit = 64,
+        rcachelimit = 128,
         fd = descriptor,
     }, io)
 end
@@ -81,6 +84,7 @@ function io.open(file, mode)
 end
 
 function io.close(file)
+	file:flush()
     return syscalls.fclose(file.fd)
 end
 
@@ -93,35 +97,38 @@ function io.flush(file)
 end
 
 function io.write(file, ...)
+	if type(file) ~= "table" or getmetatable(file) ~= io then
+		return io.write(io.stdout, file, ...)
+	end
     local values = {...}
     for _, value in ipairs(values) do
         file.buffer = (file.buffer or "") .. tostring(value)
-        if string.contains(file.buffer, "\n") or #file.buffer >= file.buflimit then
-            -- Time to flush!
-            file:flush()
-        end
+    end
+    if string.contains(file.buffer, "\n") or #file.buffer >= file.buflimit then
+        -- Time to flush!
+        file:flush()
     end
 end
 
 function io.getc(file)
     file = file or io.stdin
 
-    if file.buffer == "" then
-        file.buffer = syscalls.fread(file.fd, file.buflimit)
+    if file.rcache == "" then
+        file.rcache = syscalls.fread(file.fd, file.rcachelimit)
     end
-    if file.buffer == nil then return nil end
-    local c = string.sub(file.buffer, file.bufidx, file.bufidx)
-    if file.bufidx == #file.buffer then
+    if file.rcache == nil then return nil end
+    local c = string.sub(file.rcache, file.rcacheidx, file.rcacheidx)
+    if file.rcacheidx == #file.rcache then
         -- Oh no, we ran out of buffer
-        file.buffer = ""
-        file.bufidx = 1
+        file.rcache = ""
+        file.rcacheidx = 1
     else
-        file.bufidx = file.bufidx + 1
+        file.rcacheidx = file.rcacheidx + 1
     end
     if c == "" then c = nil end
     if c == nil then
-        file.buffer = ""
-        file.bufidx = 1
+        file.rcache = ""
+        file.rcacheidx = 1
     end
     return c
 end
@@ -239,6 +246,18 @@ end
 function io.stream(writer, reader, mode)
     local fd = syscalls.fstream(writer, reader, mode)
     return io.from(fd)
+end
+
+function io.size(path)
+	return syscalls.fsize(path)
+end
+
+function io.allowed(path, ring, mode)
+	return syscalls.fallowed(path, ring, mode)
+end
+
+function io.readonly(path)
+	return syscalls.freadonly(path)
 end
 
 function print(...)

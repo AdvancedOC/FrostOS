@@ -5,7 +5,7 @@ local width = tonumber(args[1])
 local height = width == nil and nil or tonumber(args[2])
 
 local resizeAll = true
-local i = 1
+local i = 1 + (width and 1 or 0) + (height and 1 or 0)
 while args[i] do
     if args[i] == "-d" or args[i] == "--device" then
         resizeAll = false
@@ -17,13 +17,17 @@ while args[i] do
         local mw, mh = syscalls.graphics_maxResolution(d)
         syscalls.graphics_setResolution(width or mw, height or mh, d)
         i = i + 1
+    else
+    	i = i + 1
     end
 end
 
 if resizeAll then
     local gpuCount = syscalls.graphics_gpuCount()
     for i=1,gpuCount do
-        local mw, mh = syscalls.graphics_maxResolution(i)
-        syscalls.graphics_setResolution(width or mw, height or mh, i)
+    	if syscalls.graphics_getScreen(i) then
+	        local mw, mh = syscalls.graphics_maxResolution(i)
+	        syscalls.graphics_setResolution(width or mw, height or mh, i)
+     	end
     end
 end

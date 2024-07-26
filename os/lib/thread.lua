@@ -3,11 +3,11 @@ local syscalls = require("syscalls")
 thread = {}
 
 function thread.spawn(func)
-
+	return syscalls.tspawn(func)
 end
 
 function thread.kill(threadID)
-
+	return syscalls.tkill(threadID or thread.current())
 end
 
 waitGroup = {}
@@ -85,15 +85,11 @@ function mutex:unlock()
 end
 
 function thread.current()
-
+	return syscalls.tself()
 end
 
 function thread.isRunning(threadID)
-
-end
-
-function thread.valid(threadID)
-
+	return syscalls.trunning(threadID or thread.current())
 end
 
 function thread.join(...)

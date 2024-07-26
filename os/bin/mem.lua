@@ -41,9 +41,6 @@ end
 local divisor = unit[1]
 local unitname = unit[2]
 
-local formatchar = string.upper(format:sub(1,1))
-
-
 if args[1] == "free" then
 	local rawtotal = syscalls.computer_totalMemory()
 	local rawfree = syscalls.computer_freeMemory()
@@ -64,6 +61,21 @@ elseif args[1] == "total" then
 	local totalmem = round(syscalls.computer_totalMemory()/divisor)
 
 	print(tostring(totalmem) .. unitname .. " of RAM total")
+elseif args[1] == "clean" then
+	local before = syscalls.computer_freeMemory()
+	syscalls.computer_cleanMemory()
+	local after = syscalls.computer_freeMemory()
+
+	local rawsavedmem = before-after
+	local savedmem = round(rawsavedmem/divisor)
+	local rawtotal = syscalls.computer_totalMemory()
+
+	if rawsavedmem < 0 then
+		print("We have managed to increase your memory usage by "  .. tostring(-savedmem) .. " " .. unitname .. " (" .. tostring(-round(rawsavedmem/rawtotal*100)) .. "%)")
+	else
+		print("Decreased memory usage by " .. tostring(savedmem) .. " " .. unitname .. " (" .. tostring(round(rawsavedmem/rawtotal*100)) .. "%)")
+	end
+
 else
 	local rawtotal = syscalls.computer_totalMemory()
 	local rawfree = syscalls.computer_freeMemory()

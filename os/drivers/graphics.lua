@@ -1,4 +1,3 @@
-local useBuffer = false
 local defaultGPU
 
 -- TODO: implement custom buffer and/or use the VRAM buffer from the GPU (but it's not in skyfac :sob:)
@@ -23,14 +22,14 @@ end
 if #gpus < 1 then error("No GPUs found") end
 
 defaultGPU = 1
-local supportsVRAMBuffer = false -- we don't assume it does, because a lot of modpacks run slightly outdated versions of OpenComputers
-do
-    local shitproxy = component.proxy(gpus[defaultGPU]) -- we need a proxy to be able to check if a function exists
+-- local supportsVRAMBuffer = false -- we don't assume it does, because a lot of modpacks run slightly outdated versions of OpenComputers
+-- do
+--     local shitproxy = component.proxy(gpus[defaultGPU]) -- we need a proxy to be able to check if a function exists
 
-    if shitproxy.buffers then
-        supportsVRAMBuffer = true
-    end
-end
+--     if shitproxy.buffers then
+--         supportsVRAMBuffer = true
+--     end
+-- end
 
 local gpuResolutions = {}
 
@@ -43,7 +42,7 @@ local function graphics_setDefaultGPU(proc, gpuID)
     defaultGPU = gpuID
 end
 local function graphics_getScreens()
-    return screens
+    return table.copy(screens)
 end
 
 local function graphics_getGPUID(proc, uuid)
@@ -136,7 +135,7 @@ return function (process)
 
     -- basically recreations of the functions in the gpu component
     if process.ring < 3 then process:defineSyscall("graphics_bind", graphics_bind) end
-    if process.ring < 3 then process:defineSyscall("graphics_getScreen", graphics_getScreen) end
+    process:defineSyscall("graphics_getScreen", graphics_getScreen)
 
     process:defineSyscall("graphics_getResolution", graphics_getResolution)
     process:defineSyscall("graphics_maxResolution", graphics_maxResolution)

@@ -137,7 +137,19 @@ local aliases = {
 
 local invkeys = {} -- inverse lookup table because memory usage can suck my dick
 
-for k,v in pairs(keys) do invkeys[v] = k end
+if MemoryConservative then
+	invkeys = setmetatable(invkeys,{
+		__index = function (tab,k)
+			for k2,v in pairs(keys) do
+				if v == k then return k2 end
+			end
+		end
+	})
+else
+	for k,v in pairs(keys) do invkeys[v] = k end
+end
+
+
 
 local downkeys = {}
 
@@ -154,13 +166,13 @@ local function keyReleased(keyboardAddr, char, code, playerName)
 	justreleased[code] = true
 end
 
-local function clipboardThing(keyboardAddr, value, playerName)
+-- local function clipboardThing(keyboardAddr, value, playerName)
 
-end
+-- end
 
 Events.addCallback("key_down", keyPressed)
 Events.addCallback("key_up", keyReleased)
-Events.addCallback("clipboard", clipboardThing)
+-- Events.addCallback("clipboard", clipboardThing)
 
 local function getKey(proc, label)
 	label = aliases[label] or label

@@ -6,8 +6,38 @@ gio = {}
 -- fstab cache
 local fstab = {}
 
--- symtab cache
 local symtab = {}
+
+function gio.alldisks()
+	local iter = component.list('filesystem')
+	return function()
+		local fs = iter()
+		if not fs then return nil end
+		return component.invoke(fs, 'getLabel') or fs, fs
+	end
+end
+
+---@return string?
+function gio.diskAddress(disk)
+	for label, addr in gio.alldisks() do
+		if label == disk or addr == disk then
+			return label
+		end
+	end
+	return "tmpfs"
+end
+
+function gio.getBootMount()
+	return "/mnt/" .. gio.diskAddress(computer.getBootAddress())
+end
+
+
+component.invoke(computer.getBootAddress(), 'setLabel', 'FrostOS')
+
+function gio.isReadOnly(disk)
+	return component.invoke(disk, 'isReadOnly')
+end
+
 
 ---@return string, string
 local function getPathInfo(path)
@@ -15,11 +45,89 @@ local function getPathInfo(path)
     error(path)
     end
     assert(path:sub(1, 1) == "/")
-    local diskID, diskPath = computer.getBootAddress(), path
+    if path == "/tmp" then
+    	return computer.tmpAddress(), ""
+    end
+    if path == "/mnt" then
+    	return computer.getBootAddress(), "mnt"
+    end
+    if string.startswith(path, "/tmp/") then
+    	return computer.tmpAddress(), path:sub(6)
+    end
+    if path == "/mnt/tmpfs" then
+    	return computer.tmpAddress(), ""
+    end
+    if string.startswith(path, "/mnt/tmpfs/") then
+    	return computer.tmpAddress(), path:sub(12)
+    end
+    if string.startswith(path, "/mnt/") then
+    	for disk, addr in gio.alldisks() do
+     		if path == "/mnt/" .. disk then
+       			return addr, ""
+       		end
+       		if path == "/mnt/" .. addr then
+         			return addr, ""
+         		end
+         	if string.startswith(path, "/mnt/" .. disk .. "/") then
+          		local subpath = string.sub(path, 7 + #disk)
+            	if addr == computer.getBootAddress() and subpath == "mnt" then
+             		return getPathInfo('/mnt')
+             	end
+            	if addr == computer.getBootAddress() and string.startswith(subpath, "mnt/") then
+             		return getPathInfo('/' .. subpath)
+             	end
+            	return addr, subpath
+          	end
+     	end
+    end
 
+    if fstab[path] then return getPathInfo("/mnt/" .. gio.resolveMount(path)) end
+    if symtab[path] then return getPathInfo(symtab[path]) end
+
+    -- fstab and symtab scanning
+    local outpath = path
+    for i=1,#path do
+    	if path:sub(i, i) == "/" then
+     		local behind = path:sub(1, i-1)
+       		if fstab[behind] then
+         		outpath = "/mnt/" .. gio.resolveMount(behind) .. path:sub(i)
+           	elseif symtab[behind] then
+            	outpath = symtab[behind] .. path:sub(i)
+         	end
+     	end
+    end
+
+    if outpath ~= path then return getPathInfo(outpath) end
+
+    local diskID, diskPath = computer.getBootAddress(), path:sub(2)
     -- TODO: handle fstab and symtab
 
     return diskID, diskPath
+end
+
+function gio.isPathReadOnly(path)
+	local disk, path = getPathInfo(path)
+	return gio.isReadOnly(disk)
+end
+
+function gio.resolveMount(mountpoint)
+	if mountpoint == "/" then return gio.diskAddress(computer.getBootAddress()) end
+	if string.startswith(mountpoint, "/mnt/") then
+		if string.contains(mountpoint:sub(6), "/") then
+			local disk, p = getPathInfo(mountpoint)
+			assert(p == "", "Very confusing pointpoint: " .. mountpoint)
+			return disk
+		end
+		return gio.diskAddress(mountpoint:sub(6))
+	end
+	if mountpoint == "/tmp" then
+		return computer.tmpAddress()
+	end
+	while symtab[mountpoint] do
+		mountpoint = symtab[mountpoint]
+	end
+	if not fstab[mountpoint] then return end
+	return gio.diskAddress(fstab[mountpoint])
 end
 
 -- A file for the Kernel
@@ -35,6 +143,7 @@ end
 
 ---@return Kernel.File?, string?
 function gio.open(path, mode)
+	if gio.pathType(path) ~= "file" then return nil, "Not a file" end
     local diskID, diskPath = getPathInfo(path)
     local handle, err = component.invoke(diskID, "open", diskPath, mode)
     if not handle then
@@ -47,6 +156,7 @@ function gio.open(path, mode)
         mode = mode,
     }
 end
+
 
 ---@return Kernel.File
 function gio.new(memory, mode)
@@ -133,10 +243,83 @@ function gio.read(file, amount)
     end
 end
 
+local function addTabs(results, directory)
+	for path in pairs(fstab) do
+    	if string.startswith(path, directory .. "/") or (directory == "/") then
+     		-- Mountpoints inside this directory!
+       		local sub = string.sub(path, directory == "/" and 2 or #directory + 2)
+         	-- If it has /, then it is actually deeper
+         	if not string.contains(sub, '/') then
+          		table.insert(results, sub)
+          	end
+     	end
+    end
+    for path in pairs(symtab) do
+       	if string.startswith(path, directory .. "/") or (directory == "/") then
+        		-- Mountpoints inside this directory!
+          		local sub = string.sub(path, directory == "/" and 2 or #directory + 2)
+            	-- If it has /, then it is actually deeper
+            	if not string.contains(sub, '/') then
+             		table.insert(results, sub)
+             	end
+        	end
+       end
+end
+
 ---@return string[]?, string?
 function gio.list(directory)
+	if directory == "/mnt" then
+		local results = {}
+   		for mnt in gio.alldisks() do
+     		table.insert(results, mnt)
+    	end
+     	addTabs(results, directory)
+     	return results
+    end
+
     local driveID, truePath = getPathInfo(directory)
-    return component.invoke(driveID, "list", truePath)
+    if driveID == computer.getBootAddress() and truePath == "mnt" then
+    	local results = {}
+     		for mnt in gio.alldisks() do
+       		table.insert(results, mnt)
+      	end
+       	addTabs(results, directory)
+       	return results
+    end
+
+    local dirType = gio.pathType(directory)
+    if dirType == "file" or dirType == "symlink" then return nil, "Not a directory" end
+
+    if dirType == "mount" then
+    	local mountedTo = gio.resolveMount(directory)
+     	if directory ~= "/mnt/" .. mountedTo then
+     		return gio.list("/mnt/" .. mountedTo)
+      	end
+    end
+
+    local results, err = component.invoke(driveID, "list", truePath)
+    if not results then return nil, err end
+
+    for i=1,#results do
+    	if results[i]:sub(-1, -1) == "/" then
+     		results[i] = results[i]:sub(1, -2)
+     	end
+    end
+
+    if driveID == computer.getBootAddress() and truePath == "mnt" then
+    	return gio.list("/mnt")
+    end
+
+    -- Add virtual folders
+    if driveID == computer.getBootAddress() and truePath == "" or truePath == "/" then
+    	table.insert(results, 'tmp')
+    	table.insert(results, 'mnt')
+    end
+
+    addTabs(results, directory)
+
+
+    return results
 end
 
 function gio.dofile(path,...)
@@ -154,6 +337,21 @@ function gio.dofile(path,...)
 end
 
 function gio.remove(path)
+	if path == "/mnt" then
+		return "Operation not permitted"
+	end
+	for disk in gio.alldisks() do
+		if path == "/mnt/" .. disk then
+			-- You can't delete a disk.
+			return "Operation not permitted"
+		end
+	end
+	if path == "/" then
+		return "Operation not permitted"
+	end
+	if path == "/tmp" then
+		return "Operation not permitted"
+	end
     local diskID, truePath = getPathInfo(path)
     return component.invoke(diskID, "remove", truePath)
 end
@@ -193,13 +391,34 @@ end
 
 function gio.exists(path)
     local diskID, truePath = getPathInfo(path)
+    if diskID == computer.getBootAddress() and truePath == "mnt" then
+    	return true
+    end
     return component.invoke(diskID, "exists", truePath)
 end
 
 function gio.pathType(path)
-    if symtab[path] then return "symlink" end
+	if path == "/" then return "directory" end
+    if symtab[path] then
+    	local child = gio.pathType(symtab[path])
+     	if child == "none" then
+     		return "symlink"
+       	else
+        	return child
+      	end
+    end
     if fstab[path] then return "mount" end
     if not gio.exists(path) then return "none" end
     local driveID, path = getPathInfo(path)
+    if driveID == computer.getBootAddress() then
+    	if path == "tmp" then return "directory" end
+     	if path == "mnt" then return "directory" end
+	    if string.startswith(path, "mnt/") then
+	      	for disk in gio.alldisks() do
+	       		if path == "mnt/" .. disk then return "mount" end
+	       	end
+	    end
+    end
+    if path == "" then return "mount" end
     return component.invoke(driveID, "isDirectory", path) and "directory" or "file"
 end

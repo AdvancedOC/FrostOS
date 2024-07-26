@@ -1,16 +1,29 @@
 AllDrivers = {}
+MemoryConservative = computer.totalMemory() < 512*1024
+
+function log(...)
+
+end
 
 dofile("os/kernel/utils.lua")
 dofile("os/kernel/gio.lua")
 dofile("os/kernel/pio.lua")
 dofile("os/kernel/process.lua")
 dofile("os/kernel/events.lua")
+dofile("os/kernel/scheduler.lua")
 
 for _, driver in ipairs(gio.list("/os/drivers")) do
-  table.insert(AllDrivers, gio.dofile("/os/drivers/" .. driver))
+	if string.endswith(driver, ".lua") then
+  		table.insert(AllDrivers, gio.dofile("/os/drivers/" .. driver))
+	end
 end
 
--- For now, forcefully run bterm
+log("Memory Conservative:", tostring(MemoryConservative))
+
+-- Init is PID 0, (guaranteed). It has no parent
+Init = Process.spawn(nil, "krnl", "/", nil, nil, nil, {}, 0)
+
+-- For now, forcefully run login
 local login = Process.spawn(Init, "login", "/", nil, nil, nil, {}, 1)
 Init.children[login.pid] = login
 
@@ -26,21 +39,20 @@ if not success then
 end
 
 while true do
-    local zombies
-    for pid, proc in pairs(allProcs) do
-        proc:resumeThreads()
-        if proc.parent == Init and proc:isProcessOver() then
-            zombies = zombies or {}
-            table.insert(zombies, pid)
-        end
+    local pid = next(allProcs)
+    while pid do
+    	local proc = allProcs[pid]
+     	if proc then
+	     	local npid = next(allProcs, pid)
+	        proc:resumeThreads()
+	        if proc.parent == Init and proc:isProcessOver() then
+	        	proc:kill()
+	        end
+	        pid = npid
+        else
+        	break -- Oh no
+      	end
     end
-    if zombies then
-        for i=1,#zombies do
-        	if allProcs[zombies[i]] then
-	            -- And that process was never seen ever again
-	            allProcs[zombies[i]]:kill()
-         	end
-        end
-    end
+    --AttemptGC(8*1024,10)
 	Events.process(0.01)
 end

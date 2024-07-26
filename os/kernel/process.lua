@@ -8,6 +8,7 @@
 ---@field env {[string]: string}
 ---@field namespace table
 ---@field syscalls {[string]: function}
+---@field usyscalls {[string]: function, _proc: Kernel.Process}
 ---@field threads {[number]: thread}
 ---@field children {[number]: Kernel.Process}
 Process = {}
@@ -15,6 +16,7 @@ Process.__index = Process
 
 ---@type {[number]: Kernel.Process}
 allProcs = {}
+ProcPool = {}
 local npid = 0
 
 ---@param parent? Kernel.Process
@@ -25,31 +27,75 @@ local npid = 0
 ---@param stderr? Kernel.File
 ---@param env? {[string]: string}
 ---@param ring? number
----@return Kernel.Process
+---@return Kernel.Process?, string?
 function Process.spawn(parent, name, cwd, stdout, stdin, stderr, env, ring)
     local pid = npid
     npid = npid + 1
-    local process = setmetatable({
-        parent = parent,
-        name = name,
-        cwd = cwd,
-        ring = ring or 3,
-        files = {
-            [0] = stdout or gio.new("", "a"),
-            [1] = stdin or gio.new("", "r"),
-            [2] = stderr or gio.new("", "a"),
-        },
-        pid = pid,
-        syscalls = {},
-        env = env or {},
-        namespace = {},
-        threads = {},
-        children = {},
-    }, Process)
+    local process
+	if #ProcPool == 0 then
+		process = setmetatable({
+	        parent = parent,
+	        name = name,
+	        cwd = cwd,
+	        ring = ring or 3,
+	        files = {
+	            [0] = stdout,
+	            [1] = stdin,
+	            [2] = stderr,
+	        },
+	        pid = pid,
+	        syscalls = {},
+	        usyscalls = {},
+	        env = env or {},
+	        namespace = {},
+	        threads = {},
+	        children = {},
+	    }, Process)
+		setmetatable(process.syscalls, {
+	    	__index = function(sys, index)
+	     		if process.usyscalls[index] then
+	       			local sysc = process.usyscalls[index]
+	       			sys[index] = function(...)
+	          			return sysc(process, ...)
+	          		end
+	             	return sys[index]
+	       		end
+	     	end,
+	    })
+	else
+		process = ProcPool[#ProcPool]
+		ProcPool[#ProcPool] = nil
+		process.namespace = {}
+		process.parent = parent
+		process.name = name
+		process.cwd = cwd
+		process.ring = ring or 3
+		process.pid = pid
+		process.files[0] = stdout
+		process.files[1] = stdin
+		process.files[2] = stderr
+		if env then
+			local key = next(env)
+			while key do process.env[key] = env[key] key = next(env, key) end
+		end
+		setmetatable(process.syscalls, {
+	    	__index = function(sys, index)
+	     		if process.usyscalls[index] then
+	       			local sysc = process.usyscalls[index]
+	       			sys[index] = function(...)
+	          			return sysc(process, ...)
+	          		end
+	             	return sys[index]
+	       		end
+	     	end,
+	    })
+    end
+
+
+    local err = process:initEnvironment()
+    if err then return nil, err end
 
     allProcs[pid] = process
-
-    process:initEnvironment()
 
     return process
 end
@@ -68,17 +114,6 @@ function Process:initEnvironment()
         "/usr/bin/?/init.lua",
         "/os/bin/?.lua",
         "/os/bin/?/init.lua",
-    }
-
-    -- Minimal Lua library we can provide
-    namespace.package = {
-        config = '/\n;\n?\n!\n~',
-        preload = {},
-        ---@type table
-        loaded = {
-            syscalls = self.syscalls,
-        },
-        path = table.concat(loadpath, ';'),
     }
 
     namespace.assert = assert
@@ -100,9 +135,10 @@ function Process:initEnvironment()
     namespace.type = type
     namespace.xpcall = xpcall
     namespace.checkArg = checkArg
+    namespace.log = log
 
     if self.ring <= 2 then
-    	namespace.Events = Events -- ONLY privliged commands, shell and/or environment gets this.
+    	namespace.Events = Events -- ONLY privileged commands, shell and/or environment gets this.
     end
 
     if coroutine then namespace.coroutine = table.copy(coroutine) end
@@ -123,10 +159,22 @@ function Process:initEnvironment()
     pio.registerFor(self)
 
     for _, init in ipairs(AllDrivers) do
-        init(self)
+    	init(self)
     end
 
-    self:preload("io", "/os/lib/io.lua")
+    -- Minimal Lua library we can provide
+    namespace.package = {
+        config = '/\n;\n?\n!\n~',
+        preload = {},
+        ---@type table
+        loaded = {
+            syscalls = self.syscalls,
+        },
+        path = table.concat(loadpath, ';'),
+    }
+
+    local ok, err = self:preload("io", "/os/lib/io.lua")
+    if not ok then return err end
 end
 
 ---@param file Kernel.File
@@ -167,8 +215,16 @@ function Process:resumeThreads()
     local cleanup
     for id, thread in pairs(self.threads) do
         local good, err = coroutine.resume(thread)
+        if self:isProcessOver() then
+        	-- Don't care, process died, can't be bothered
+         	return
+        end
         if not good then
-        	gio.write(self.files[2], err .. "\n" .. debug.traceback(thread) .. "\n")
+        	if self.ring == 0 then
+         		error(tostring(err) .. debug.traceback(thread))
+         	end
+        	if self.files[2] then gio.write(self.files[2], tostring(err) .. "\n" .. debug.traceback(thread) .. "\n") end
+         	--error(tostring(err) .. debug.traceback(thread))
          	self:kill()
          	break
         end
@@ -192,9 +248,7 @@ function Process:isProcessOver()
 end
 
 function Process:defineSyscall(name, callback)
-    self.syscalls[name] = function(...)
-        return callback(self, ...)
-    end
+	self.usyscalls[name] = callback
 end
 
 ---@param name string
@@ -213,7 +267,7 @@ function Process:preload(name, file)
     local code, err = gio.read(file)
     if not code then return err end
 
-    load(code, name, "bt", self.namespace)()
+    load(code, "=" .. name, "bt", self.namespace)()
 
     self.namespace.package.loaded[name] = self.namespace[name]
 end
@@ -222,6 +276,10 @@ end
 function Process.kill(proc)
     if type(proc) == "number" then
         return Process.kill(allProcs[proc])
+    end
+
+    if not allProcs[proc.pid] then
+    	return -- Somehow, the process is already dead
     end
 
     -- Designed to not allocate, to attempt to recover from a forkbomb
@@ -237,6 +295,7 @@ function Process.kill(proc)
     -- If we have child processes, we need to kill them. If they are not done, well, we move them to Init and make it Init's problem.
     local pid = next(proc.children)
     while pid do
+    	local nchild = next(proc.children, pid)
     	local child = proc.children[pid]
         if child:isProcessOver() then
             child:kill() -- Just forget about it
@@ -244,7 +303,7 @@ function Process.kill(proc)
             Init.children[pid] = child
             child.parent = Init
         end
-        pid = next(proc.children, pid)
+        pid = nchild
     end
 
     -- Remove the proc
@@ -252,7 +311,11 @@ function Process.kill(proc)
         proc.parent.children[proc.pid] = nil
     end
     allProcs[proc.pid] = nil
+    table.clear(proc.files)
+    table.clear(proc.threads)
+    table.clear(proc.children)
+    table.clear(proc.env)
+    table.clear(proc.syscalls)
+    table.clear(proc.usyscalls)
+    if #ProcPool < 50 or not MemoryConservative then table.insert(ProcPool, proc) end
 end
-
--- Init is PID 0, (guaranteed). It has no parent
-Init = Process.spawn(nil, "krnl", "/", nil, nil, nil, {}, 0)

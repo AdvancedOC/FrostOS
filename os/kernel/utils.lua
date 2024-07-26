@@ -11,6 +11,10 @@ function string.startswith(s,sub)
     return s:sub(1,#sub) == sub
 end
 
+function string.endswith(s,sub)
+	return s:sub(#s-#sub+1) == sub
+end
+
 function string.split(inputstr, sep)
     sep=string.escape_pattern(sep)
     local t={}
@@ -35,4 +39,32 @@ function table.copy(tab)
     end
 
     return ntab
+end
+
+function table.clear(t)
+	local key = next(t)
+	while key do t[key] = nil key = next(t, key) end
+	return t
+end
+
+function JustDoGC()
+	local mem = computer.freeMemory()
+	for i=1,200 do
+		local t = {}
+		t = nil
+		Events.process(0.01)
+		-- GC!!!!
+		if computer.freeMemory() > mem then break end
+	end
+end
+
+---@param spaceNeeded? number
+---@param attempts? integer
+function AttemptGC(spaceNeeded, attempts)
+	spaceNeeded = spaceNeeded or (16*1024)
+	attempts = attempts or 200
+	repeat
+		Events.process(0.01)
+		attempts = attempts - 1
+	until computer.freeMemory() >= spaceNeeded or attempts < 1
 end
