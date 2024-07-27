@@ -62,8 +62,8 @@ addProtectedPath("/os/drivers", {
 
 addProtectedPath("/os", {
 	r = 3,
-  w = 3,
-  a = 0,
+  w = 1,
+  a = 1,
 })
 
 pio = {}

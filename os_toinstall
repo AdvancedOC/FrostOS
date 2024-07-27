@@ -58,5 +58,3 @@ directory /usr/etc
 file /usr/etc/.scuterc
 directory /usr/bin
 file /usr/bin/forkbomb.lua
-file /usr/bin/env.lua
-file /usr/bin/sh.lua

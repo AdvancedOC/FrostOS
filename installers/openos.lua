@@ -68,7 +68,8 @@ local ans = io.read("l")
 
 if ans:lower() ~= "y" then print("Canceled installation.") return end
 
-print("Would you like to delete all the files on this drive? y/N")
+print("Would you like to delete all the files on this drive?")
+io.write("y/N: ")
 ans = io.read("l")
 if ans:lower() == "y" then
 	local files = chosendriveproxy.list("/")

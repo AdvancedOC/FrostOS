@@ -1,4 +1,4 @@
--- To update the /os_install file open FrostOS and probably run structure / -i /.git -i /tmp -i /mnt -i /os/etc > /os_install as administrator.
+-- To update the /os_install file open FrostOS and probably run structure / -i /.git -i /tmp -i /mnt -i /os/etc -i /os/eeprom -i /os/eeprom_data > /os_toinstall as administrator.
 
 local args = ...
 
@@ -26,7 +26,9 @@ local function writePaths(path)
 	for _, forbidden in ipairs(hidden) do
 		if forbidden == path then return end
 	end
-	if io.isFile(path) then
+	if io.islink(path) then
+		print("symlink " .. path)
+	elseif io.isFile(path) then
 		print("file " .. path)
 	elseif io.isMount(path) then
 		print("mount " .. path)
