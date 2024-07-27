@@ -54,7 +54,7 @@ function SetupUsers(outdir)
 		if i == 1 then
 			ring = 0
 		end
-		io.write(io.stdout, '"', user.name, '" "', passhash, '" ', tostring(ring), '\n')
+		io.write(usertab, '"', user.name, '" "', passhash, '" ', tostring(ring), '\n')
 	end
 	io.flush(usertab)
 	io.close(usertab)
