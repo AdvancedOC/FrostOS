@@ -419,7 +419,8 @@ function gio.remove(path)
     if diskID == computer.getBootAddress() and (string.startswith(truePath, "os/kernel/") or truePath == "os/kernel") then
     	return "Operation not permitted"
     end
-    return component.invoke(diskID, "remove", truePath)
+    local ok, err = component.invoke(diskID, "remove", truePath)
+    if not ok then return err or "Operation failed" end
 end
 
 function gio.size(path)

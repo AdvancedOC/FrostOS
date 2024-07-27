@@ -1,8 +1,6 @@
 directory /
 directory /home
 file /home/.exist
-file /home/eeprom.lua
-file /home/os_toinstall
 directory /os
 directory /os/kernel
 file /os/kernel/gio.lua
@@ -21,10 +19,6 @@ file /os/drivers/data/sha256.lua
 file /os/drivers/data/base64.lua
 file /os/drivers/data.lua
 file /os/drivers/debug.lua
-directory /os/etc
-file /os/etc/symtab
-file /os/etc/fstab
-file /os/etc/usertab
 file /os/kernel.lua
 directory /os/bin
 file /os/bin/mem.lua
@@ -35,12 +29,15 @@ file /os/bin/flash.lua
 file /os/bin/benchmark.lua
 file /os/bin/structure.lua
 file /os/bin/cat.lua
+file /os/bin/install.lua
+file /os/bin/mkdir.lua
 file /os/bin/echo.lua
 file /os/bin/login.lua
 file /os/bin/bterm.lua
 file /os/bin/energy.lua
 file /os/bin/resize.lua
 file /os/bin/ld.lua
+file /os/bin/rm.lua
 file /os/bin/clear.lua
 file /os/bin/shutdown.lua
 file /os/bin/ls.lua
@@ -52,7 +49,10 @@ file /os/lib/thread.lua
 file /os/lib/term.lua
 file /os/eeprom
 file /os/eeprom_data
-file /os_files
+directory /installers
+file /installers/openos.lua
+file /os_toinstall
+file /.osprop
 file /README.md
 file /init.lua
 directory /usr

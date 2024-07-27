@@ -49,7 +49,7 @@ function SetupUsers(outdir)
 
 	for i=1,#users do
 		local user = users[i]
-		local passhash = syscalls.data_sha256(user.password)
+		local passhash = syscalls.data_encode64(syscalls.data_sha256(user.password))
 		local ring = 3
 		if i == 1 then
 			ring = 0

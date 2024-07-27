@@ -1,3 +1,5 @@
+-- To update the /os_install file open FrostOS and probably run structure / -i /.git -i /tmp -i /mnt -i /os/etc > /os_install as administrator.
+
 local args = ...
 
 local folders = {}
