@@ -17,7 +17,7 @@ local function internet_connect(proc, address, port)
 end
 
 local function internet_download(proc, address)
-	local request = internet_request(address)
+	local request = internet_request(proc, address)
 
 	local succ,err = pcall(request.finishConnect,request)
 
