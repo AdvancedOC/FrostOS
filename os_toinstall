@@ -47,8 +47,6 @@ file /os/lib/pool.lua
 file /os/lib/process.lua
 file /os/lib/thread.lua
 file /os/lib/term.lua
-file /os/eeprom
-file /os/eeprom_data
 directory /installers
 file /installers/openos.lua
 file /os_toinstall
