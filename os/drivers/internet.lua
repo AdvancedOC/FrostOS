@@ -19,7 +19,7 @@ end
 local function internet_download(proc, address)
 	local request = internet_request(proc, address)
 
-	local succ,err = pcall(request.finishConnect,request)
+	local succ,err = pcall(request.finishConnect)
 
 	if not succ then return nil, err end
 

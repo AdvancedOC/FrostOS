@@ -103,10 +103,6 @@ local k = {
 	0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
 }
 
-local function str2hexa(s)
-	return (string.gsub(s, ".", function(c) return string.format("%02x", string.byte(c)) end))
-end
-
 local function num2s(l, n)
 	local s = ""
 	for i = 1, n do
@@ -179,7 +175,7 @@ local function sha256(msg)
 	msg = preproc(msg, #msg)
 	local H = initH256({})
 	for i = 1, #msg, 64 do digestblock(msg, i, H) end
-	return str2hexa(num2s(H[1], 4) .. num2s(H[2], 4) .. num2s(H[3], 4) .. num2s(H[4], 4) ..
+	return (num2s(H[1], 4) .. num2s(H[2], 4) .. num2s(H[3], 4) .. num2s(H[4], 4) ..
 		num2s(H[5], 4) .. num2s(H[6], 4) .. num2s(H[7], 4) .. num2s(H[8], 4))
 end
 
