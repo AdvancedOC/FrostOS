@@ -225,8 +225,9 @@ function io.isFile(path)
     return io.type(path) == "file"
 end
 
+-- NOTE: Returns true only if the symlink is dead! Use io.islink to check if it is a link!
 function io.isSymlink(path)
-    return io.type(path) == "file"
+    return io.type(path) == "symlink"
 end
 
 function io.isMount(path)
@@ -258,6 +259,10 @@ end
 
 function io.readonly(path)
 	return syscalls.freadonly(path)
+end
+
+function io.islink(path)
+	return syscalls.fislink(path)
 end
 
 function print(...)

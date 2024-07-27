@@ -337,28 +337,40 @@ function gio.dofile(path,...)
 end
 
 function gio.remove(path)
-	if path == "/mnt" then
-		return "Operation not permitted"
-	end
-	for disk in gio.alldisks() do
-		if path == "/mnt/" .. disk then
-			-- You can't delete a disk.
-			return "Operation not permitted"
-		end
+	if not gio.exists(path) then
+		return "Path does not exist"
 	end
 	if path == "/" then
 		return "Operation not permitted"
 	end
-	if path == "/tmp" then
-		return "Operation not permitted"
+	if symtab[path] then
+		return "Operation not permitted: is symlink"
+	end
+	local pt = gio.pathType(path)
+	if pt == "mount" then
+		return "Operation not permitted: is mount"
 	end
     local diskID, truePath = getPathInfo(path)
+    if diskID == computer.getBootAddress() or diskID == computer.tmpAddress() or truePath == "" then
+    	return "Operation not permitted"
+    end
     return component.invoke(diskID, "remove", truePath)
 end
 
 function gio.size(path)
+	if gio.pathType(path) == "mount" then
+		local diskID = getPathInfo(path)
+		return component.invoke(diskID, "spaceUsed")
+	end
+	if gio.pathType(path) ~= "file" then
+		return nil, "Not a file"
+	end
     local diskID, truePath = getPathInfo(path)
     return component.invoke(diskID, "size", truePath)
+end
+
+function gio.islink(path)
+	return symtab[path] ~= nil
 end
 
 ---@param file Kernel.File

@@ -87,9 +87,10 @@ function ListPath(name, path, indent, root)
 		term.setForeground(table.unpack(colors[kind] or {255, 255, 255}))
 	end
 	io.write(io.stdout, prefix, name)
-	if kind == "file" then
-		if showSize then
-			io.write(io.stdout, " ", formatSize(io.size(path)))
+	if showSize then
+		local size = io.size(path)
+		if size then
+			io.write(io.stdout, " ", formatSize(size))
 		end
 	end
 	if showType then

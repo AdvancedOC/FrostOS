@@ -169,7 +169,6 @@ end
 
 function pio.size(process, path)
     path = pio.canonical(process, path)
-    if gio.pathType(path) ~= "file" then return nil, "Not a file" end
     return gio.size(path)
 end
 
@@ -191,6 +190,11 @@ function pio.allowed(process, path, ring, mode)
 	ring = ring or process.ring
 	path = pio.canonical(process, path)
 	return not isModeProblematic(mode, path, ring)
+end
+
+function pio.islink(process, path)
+	path = pio.canonical(process, path)
+	return gio.islink(path)
 end
 
 function pio.getenv(process, var)
@@ -394,6 +398,7 @@ function pio.registerFor(process)
   process:defineSyscall("fmemory", pio.memory)
   process:defineSyscall("fstream", pio.stream)
   process:defineSyscall("fallowed", pio.allowed)
+  process:defineSyscall("fislink", pio.islink)
   process:defineSyscall("pspawn", pio.spawn)
   process:defineSyscall("pexec", pio.exec)
   process:defineSyscall("pstatus", pio.processStatus)
