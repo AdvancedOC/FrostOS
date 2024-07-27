@@ -19,6 +19,7 @@ file /os/drivers/data/sha256.lua
 file /os/drivers/data/base64.lua
 file /os/drivers/data.lua
 file /os/drivers/debug.lua
+file /os/drivers/internet.lua
 file /os/kernel.lua
 directory /os/bin
 file /os/bin/mem.lua
@@ -41,6 +42,7 @@ file /os/bin/rm.lua
 file /os/bin/clear.lua
 file /os/bin/shutdown.lua
 file /os/bin/ls.lua
+file /os/bin/update.lua
 directory /os/lib
 file /os/lib/io.lua
 file /os/lib/pool.lua
