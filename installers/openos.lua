@@ -240,7 +240,7 @@ else
 end
 
 print("You should probably reboot now, if you want to try FrostOS.")
-io.write("Reboot? Y/n")
+io.write("Reboot? Y/n: ")
 
 ans = io.read()
 

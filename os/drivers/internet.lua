@@ -1,7 +1,7 @@
 local internetCards = Scheduler.all("internet")
 
 local function internet_request(proc, url, postdata, headers)
-	return internetCards:run("request", proc, url, postdata, headers)
+	return internetCards:run("request", url, postdata, headers)
 end
 
 local function internet_isTCPEnabled(proc)
