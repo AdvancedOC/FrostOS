@@ -20,6 +20,7 @@ local function downloadFile(url)
 		buf = buf .. data
 	end
 	connection.close()
+	return buf
 end
 
 -- No way to do delta updates btw
