@@ -84,7 +84,6 @@ local function downloadFile(link)
 
 	local handle = internet.request(link)
 	for chunk in handle do result = result .. chunk end
-	handle:close()
 
 	return result
 end
