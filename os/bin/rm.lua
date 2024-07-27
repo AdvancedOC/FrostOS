@@ -33,17 +33,11 @@ function Remove(path)
 		end
 		return
 	end
-	if io.isMount(path) then
-		if verbose then
-			print("Is mount, ignoring...")
-		end
-		return
-	end
 	if io.isFile(path) then
 		local err = io.remove(path)
 		if err then print("Error: " .. err) return end
 	end
-	if io.isDirectory(path) then
+	if io.isDirectory(path) or io.isMount(path) then
 		if not recursive then
 			print("Error: Unable to delete " .. path .. ": is a directory")
 		else
@@ -55,7 +49,10 @@ function Remove(path)
 					Remove(path .. "/" .. file)
 				end
 			end
-			io.remove(path)
+			if io.isDirectory(path) then
+				print("Deleting " .. path .. "...")
+				io.remove(path)
+			end
 		end
 	end
 end
