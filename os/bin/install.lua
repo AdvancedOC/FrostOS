@@ -4,7 +4,7 @@ local process = require("process")
 local syscalls = require("syscalls")
 
 function SetupUsers(outdir)
-	local usertab = io.open(outdir .. "/etc/usertab", "w")
+	local usertab = io.open(outdir .. "/os/etc/usertab", "w")
 	local users = {}
 
 	print("Create Administrator user")
@@ -45,7 +45,7 @@ function SetupUsers(outdir)
 		table.insert(users, {name = name, password = password})
 	end
 
-	print("Writing user login information in " .. outdir .. "/etc/usertab")
+	print("Writing user login information in " .. outdir .. "/os/etc/usertab")
 
 	for i=1,#users do
 		local user = users[i]
@@ -115,12 +115,12 @@ function InstallOS()
 		coroutine.yield()
 	end
 
-	print("Creating directory " .. outdir .. "/etc")
-	io.mkdir(outdir .. "/etc")
+	print("Creating directory " .. outdir .. "/os/etc")
+	io.mkdir(outdir .. "/os/etc")
 
 	print("Creating empty fstab and symtab")
-	io.close(io.open(outdir .. "/etc/fstab", "w"))
-	io.close(io.open(outdir .. "/etc/symtab", "w"))
+	io.close(io.open(outdir .. "/os/etc/fstab", "w"))
+	io.close(io.open(outdir .. "/os/etc/symtab", "w"))
 	SetupUsers(outdir)
 end
 

@@ -206,7 +206,7 @@ local sha256file = readFile("/os/drivers/data/sha256.lua")
 
 local sha256 = load(sha256file, "=sha256", "bt")()
 
-print("Writing user login information into /etc/usertab..")
+print("Writing user login information into /os/etc/usertab..")
 for i = 1,#users do
 	local user = users[i]
 	local hash = base64.encode(sha256(user.password))
@@ -215,7 +215,7 @@ for i = 1,#users do
 	usertab = usertab .. '"' .. user.name .. '" "' .. hash .. '" ' .. tostring(ring) .. "\n"
 end
 
-writeDataToFile("/etc/usertab", usertab)
+writeDataToFile("/os/etc/usertab", usertab)
 
 print("Set the label of the drive to FrostOS?")
 io.write("y/N: ")
