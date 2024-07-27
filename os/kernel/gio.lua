@@ -16,14 +16,14 @@ function gio.alldisks()
 	return function()
 		local fs = iter()
 		if not fs then return nil end
-		return component.invoke(fs, 'getLabel') or fs, fs
+		return component.invoke(fs, 'getLabel') or fs:sub(1,6), fs
 	end
 end
 
 ---@return string?
 function gio.diskAddress(disk)
 	for label, addr in gio.alldisks() do
-		if label == disk or addr == disk then
+		if label == disk or addr:sub(1,6) == disk then
 			return label
 		end
 	end

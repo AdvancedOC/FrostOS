@@ -63,14 +63,14 @@ local chosendriveid = drives[chosendrive]
 local chosendriveproxy = component.proxy(chosendriveid)
 
 print("You have chosen drive " .. drivenames[chosendrive])
-io.write("Are you sure? y/N")
+io.write("Are you sure? y/N: ")
 local ans = io.read("l")
 
-if ans:toLower() ~= "y" then print("Canceled installation.") return end
+if ans:lower() ~= "y" then print("Canceled installation.") return end
 
 print("Would you like to delete all the files on this drive? y/N")
 ans = io.read("l")
-if ans:toLower() == "y" then
+if ans:lower() == "y" then
 	local files = chosendriveproxy.list("/")
 	for k,v in ipairs(files) do
 		print("Deleting " .. v .. "...")
