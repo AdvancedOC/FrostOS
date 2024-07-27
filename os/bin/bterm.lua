@@ -69,6 +69,7 @@ end
 
 local inEscape = false
 local escapeBuffer = ""
+local inputChar
 
 local function doEscape()
 	if escapeBuffer:sub(1, 2) == "MR" then
@@ -148,9 +149,17 @@ local function doEscape()
 		end
 		return
 	end
+	if escapeBuffer == "P" then
+		inputChar = nil
+		return
+	end
+	if escapeBuffer:sub(1, 1) == "P" then
+		inputChar = escapeBuffer:sub(2)
+		return
+	end
 end
 
-local inputBuffer = "" -- TODO: handle input
+local inputBuffer = ""
 local function writeChar(char)
 	moveToFixScreen()
 
@@ -197,6 +206,19 @@ function writeOutput(memory)
 	end
 end
 
+local function bufToRender()
+	if not inputChar then return inputBuffer end
+	local b = ""
+	for i=1,#inputBuffer do
+		if inputBuffer:sub(i, i) == "\n" then
+			b = b .. "\n"
+		else
+			b = b .. inputChar
+		end
+	end
+	return b
+end
+
 local function readLine()
 	moveToFixScreen()
 	while true do
@@ -217,11 +239,11 @@ local function readLine()
 		end
 
 		if string.contains(inputBuffer, '\n') then
-			writeOutput(inputBuffer)
+			writeOutput(bufToRender())
 			return
 		end
 		for i=1,truecount do
-			syscalls.graphics_set(cx, cy, inputBuffer, i)
+			syscalls.graphics_set(cx, cy, bufToRender(), i)
 		end
 		coroutine.yield()
 	end

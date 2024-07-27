@@ -140,6 +140,9 @@ function Process:initEnvironment()
     if self.ring <= 2 then
     	namespace.Events = Events -- ONLY privileged commands, shell and/or environment gets this.
     end
+    if self.ring <= 1 then
+    	namespace.Kernel = _G
+    end
 
     if coroutine then namespace.coroutine = table.copy(coroutine) end
     if math then namespace.math = table.copy(math) end

@@ -55,6 +55,12 @@ function process.status(pid)
     return syscalls.pstatus(pid)
 end
 
+function process.join(pid)
+	while process.status(pid) ~= "dead" do
+		coroutine.yield()
+	end
+end
+
 function process.kill(pid)
 	return syscalls.pkill(pid)
 end

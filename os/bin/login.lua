@@ -85,14 +85,14 @@ until syscalls.computer_freeMemory() > 8*1024
 
 local env = "/os/bin/bterm.lua"
 
-log("Spawning environemnt process")
-local term, err = process.spawn("Environment", nil, extraStuff, extraStuff.HOME, 2)
-if not term then addWarning("Error: " .. err) end
+log("Spawning environment process")
+local term, err = process.spawn("Environment " .. env, nil, extraStuff, extraStuff.HOME, 2)
+if not term then log("Error: " .. err) addWarning("Error: " .. err) end
 
 log("Running environment " .. env)
 local ok, err = process.exec(term, env)
 
-if not ok then addWarning("Error: " .. err) end
+if not ok then log("Error: " .. err) addWarning("Error: " .. err) end
 
 if syscalls.computer_dangerouslyLowRAM() then process.exit() end
 

@@ -6,7 +6,10 @@ gio = {}
 -- fstab cache
 local fstab = {}
 
-local symtab = {}
+local symtab = {
+	['/usr/bin/sh.lua'] = '/os/bin/scute.lua',
+	['/usr/bin/env.lua'] = '/os/bin/bterm.lua',
+}
 
 function gio.alldisks()
 	local iter = component.list('filesystem')
@@ -31,8 +34,6 @@ function gio.getBootMount()
 	return "/mnt/" .. gio.diskAddress(computer.getBootAddress())
 end
 
-
-component.invoke(computer.getBootAddress(), 'setLabel', 'FrostOS')
 
 function gio.isReadOnly(disk)
 	return component.invoke(disk, 'isReadOnly')
@@ -141,10 +142,54 @@ end
 ---@field reader fun(n: number?): string
 ---@field mode string
 
+local function eeprom_writer()
+	local buf = ""
+	return function(memory)
+		buf = buf .. memory
+		Init.syscalls.eeprom_write(buf)
+	end
+end
+
+local function eeprom_reader()
+	local wholedata = Init.syscalls.eeprom_read()
+	local i = 1
+	return function(bytes)
+		local chunk = wholedata:sub(i, i+bytes-1)
+		i = i + bytes
+		return chunk
+	end
+end
+
+local function eeprom_data_writer()
+	local buf = ""
+	return function(memory)
+		buf = buf .. memory
+		Init.syscalls.eeprom_setData(buf)
+	end
+end
+
+local function eeprom_data_reader()
+	local wholedata = Init.syscalls.eeprom_getData()
+	local i = 1
+	return function(bytes)
+		local chunk = wholedata:sub(i, i+bytes-1)
+		i = i + bytes
+		return chunk
+	end
+end
+
 ---@return Kernel.File?, string?
 function gio.open(path, mode)
-	if gio.pathType(path) ~= "file" then return nil, "Not a file" end
+	if gio.pathType(path) ~= "file" and string.contains(mode, "r") then return nil, "Not a file" end
     local diskID, diskPath = getPathInfo(path)
+    if diskID == computer.getBootAddress() and diskPath == "os/eeprom" then
+    	if string.contains(mode, "w") then Init.syscalls.eeprom_write("") end
+    	return gio.newStream(eeprom_writer(), eeprom_reader(), mode)
+    end
+    if diskID == computer.getBootAddress() and diskPath == "os/eeprom_data" then
+    	if string.contains(mode, "w") then Init.syscalls.eeprom_setData("") end
+    	return gio.newStream(eeprom_data_writer(), eeprom_data_reader(), mode)
+    end
     local handle, err = component.invoke(diskID, "open", diskPath, mode)
     if not handle then
         return nil, err
@@ -310,6 +355,11 @@ function gio.list(directory)
     	return gio.list("/mnt")
     end
 
+    if driveID == computer.getBootAddress() and truePath == "os" then
+    	table.insert(results, 'eeprom')
+    	table.insert(results, 'eeprom_data')
+    end
+
     -- Add virtual folders
     if driveID == computer.getBootAddress() and truePath == "" or truePath == "/" then
     	table.insert(results, 'tmp')
@@ -350,8 +400,23 @@ function gio.remove(path)
 	if pt == "mount" then
 		return "Operation not permitted: is mount"
 	end
+	if pt == "directory" and #gio.list(path) > 0 then
+		return "Directory not empty"
+	end
     local diskID, truePath = getPathInfo(path)
-    if diskID == computer.getBootAddress() or diskID == computer.tmpAddress() or truePath == "" then
+    if truePath == "" then
+    	return "Operation not permitted"
+    end
+    if diskID == computer.getBootAddress() and truePath == "os/eeprom" then
+    	return "Operation not permitted"
+    end
+    if diskID == computer.getBootAddress() and truePath == "os/eeprom_data" then
+    	return "Operation not permitted"
+    end
+    if diskID == computer.getBootAddress() and truePath == "os" then
+    	return "Operation not permitted"
+    end
+    if diskID == computer.getBootAddress() and (string.startswith(truePath, "os/kernel/") or truePath == "os/kernel") then
     	return "Operation not permitted"
     end
     return component.invoke(diskID, "remove", truePath)
@@ -366,6 +431,12 @@ function gio.size(path)
 		return nil, "Not a file"
 	end
     local diskID, truePath = getPathInfo(path)
+    if diskID == computer.getBootAddress() and truePath == "os/eeprom" then
+    	return Init.syscalls.eeprom_getSize()
+    end
+    if diskID == computer.getBootAddress() and truePath == "os/eeprom_data" then
+    	return Init.syscalls.eeprom_getDataSize()
+    end
     return component.invoke(diskID, "size", truePath)
 end
 
@@ -398,13 +469,20 @@ end
 
 function gio.mkdir(path)
     local diskID, truePath = getPathInfo(path)
-    return component.invoke(diskID, "makeDirectory", truePath)
+    local ok, err = component.invoke(diskID, "makeDirectory", truePath)
+    if not ok then return err end
 end
 
 function gio.exists(path)
     local diskID, truePath = getPathInfo(path)
-    if diskID == computer.getBootAddress() and truePath == "mnt" then
-    	return true
+    if diskID == computer.getBootAddress() then
+    	if truePath == "mnt" then
+    		return true
+      	elseif truePath == "os/eeprom" then
+       		return true
+        elseif truePath == "os/eeprom_data" then
+        	return true
+     	end
     end
     return component.invoke(diskID, "exists", truePath)
 end
@@ -430,6 +508,12 @@ function gio.pathType(path)
 	       		if path == "mnt/" .. disk then return "mount" end
 	       	end
 	    end
+		if path == "os/eeprom" then
+			return "file"
+		end
+		if path == "os/eeprom_data" then
+			return "file"
+		end
     end
     if path == "" then return "mount" end
     return component.invoke(driveID, "isDirectory", path) and "directory" or "file"

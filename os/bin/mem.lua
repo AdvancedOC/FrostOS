@@ -8,6 +8,8 @@ end
 
 local format = "mb"
 
+if syscalls.computer_totalMemory() < 1024*1024 then format = "kb" end
+
 local i = 1
 while i <= #args do
 	local arg = args[i]
@@ -71,7 +73,7 @@ elseif args[1] == "clean" then
 	local rawtotal = syscalls.computer_totalMemory()
 
 	if rawsavedmem < 0 then
-		print("We have managed to increase your memory usage by "  .. tostring(-savedmem) .. " " .. unitname .. " (" .. tostring(-round(rawsavedmem/rawtotal*100)) .. "%)")
+		print("We have managed to increase your memory usage by "  .. tostring(math.abs(savedmem)) .. " " .. unitname .. " (" .. tostring(-round(rawsavedmem/rawtotal*100)) .. "%)")
 	else
 		print("Decreased memory usage by " .. tostring(savedmem) .. " " .. unitname .. " (" .. tostring(round(rawsavedmem/rawtotal*100)) .. "%)")
 	end

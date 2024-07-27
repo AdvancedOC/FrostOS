@@ -11,7 +11,7 @@ local function get_eeprom()
 	return eeprom
 end
 
-local function eeprom_read()
+local function eeprom_read(proc)
 	local eeprom = get_eeprom()
 
 	if eeprom then
@@ -19,7 +19,7 @@ local function eeprom_read()
 	end
 end
 
-local function eeprom_write(data)
+local function eeprom_write(proc, data)
 	local eeprom = get_eeprom()
 
 	if eeprom then
@@ -27,7 +27,7 @@ local function eeprom_write(data)
 	end
 end
 
-local function eeprom_getLabel()
+local function eeprom_getLabel(proc)
 	local eeprom = get_eeprom()
 
 	if eeprom then
@@ -35,7 +35,7 @@ local function eeprom_getLabel()
 	end
 end
 
-local function eeprom_setLabel(newLabel)
+local function eeprom_setLabel(proc, newLabel)
 	local eeprom = get_eeprom()
 
 	if eeprom then
@@ -43,7 +43,7 @@ local function eeprom_setLabel(newLabel)
 	end
 end
 
-local function eeprom_getSize()
+local function eeprom_getSize(proc)
 	local eeprom = get_eeprom()
 
 	if eeprom then
@@ -51,7 +51,15 @@ local function eeprom_getSize()
 	end
 end
 
-local function eeprom_getChecksum()
+local function eeprom_getDataSize(proc)
+	local eeprom = get_eeprom()
+
+	if eeprom then
+		return ci(eeprom, "getDataSize")
+	end
+end
+
+local function eeprom_getChecksum(proc)
 	local eeprom = get_eeprom()
 
 	if eeprom then
@@ -59,7 +67,7 @@ local function eeprom_getChecksum()
 	end
 end
 
-local function eeprom_makeReadonly() -- this is irreversible, maybe we should add a warning? or maybe just don't have it?
+local function eeprom_makeReadonly(proc) -- this is irreversible, maybe we should add a warning? or maybe just don't have it?
 	local eeprom = get_eeprom()
 
 	if eeprom then
@@ -67,7 +75,7 @@ local function eeprom_makeReadonly() -- this is irreversible, maybe we should ad
 	end
 end
 
-local function eeprom_getData()
+local function eeprom_getData(proc)
 	local eeprom = get_eeprom()
 
 	if eeprom then
@@ -75,7 +83,7 @@ local function eeprom_getData()
 	end
 end
 
-local function eeprom_setData()
+local function eeprom_setData(proc)
 	local eeprom = get_eeprom()
 
 	if eeprom then
@@ -86,16 +94,25 @@ end
 ---@param process Kernel.Process
 return function (process)
 	process:defineSyscall("eeprom_read", eeprom_read)
-	process:defineSyscall("eeprom_write", eeprom_write)
 
 	process:defineSyscall("eeprom_getLabel", eeprom_getLabel)
-	process:defineSyscall("eeprom_setLabel", eeprom_setLabel)
 
 	process:defineSyscall("eeprom_getSize", eeprom_getSize)
 
 	process:defineSyscall("eeprom_getChecksum", eeprom_getChecksum)
-	process:defineSyscall("eeprom_makeReadonly", eeprom_makeReadonly)
+
+	process:defineSyscall("eeprom_getDataSize", eeprom_getDataSize)
 
 	process:defineSyscall("eeprom_getData", eeprom_getData)
+
+	-- Writes are only for cool boys
+	if process.ring > 2 then return end
+	process:defineSyscall("eeprom_write", eeprom_write)
+
+	process:defineSyscall("eeprom_setLabel", eeprom_setLabel)
+
 	process:defineSyscall("eeprom_setData", eeprom_setData)
+
+	if process.ring > 1 then return end -- very dangerous function, only let kernel, drivers & login mess with it
+	process:defineSyscall("eeprom_makeReadonly", eeprom_makeReadonly)
 end

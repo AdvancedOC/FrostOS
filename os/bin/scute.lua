@@ -204,7 +204,7 @@ io.stdout.buflimit = 0
 
 local function awaitRam()
 	repeat
-		Events.process(0.01)
+		if Events then Events.process(0.01) end
 		coroutine.yield()
 	until syscalls.computer_freeMemory() > 10*1024
 end

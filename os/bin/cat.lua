@@ -28,7 +28,8 @@ for _, arg in ipairs(args) do
         	local chunk = f:read(chunksize)
         	io.write(io.stdout, chunk)
         until not chunk
+        io.close(f)
     end
 end
 
-if silent then io.flush(io.stdout) else io.write('\n') end
+if silent then io.flush(io.stdout) else io.write('\n') io.flush(io.stdout) end

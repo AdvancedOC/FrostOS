@@ -6,6 +6,7 @@ local showSize = false
 local recursive = false
 local showHidden = false
 local colored = false
+local showPerms = false
 local allowed = {
 	file = true,
 	directory = true,
@@ -29,10 +30,13 @@ while args[i] do
 			elseif o == "h" then
 				showType = true
 				showSize = true
+				showPerms = true
 			elseif o == "f" then
 				showHidden = true
 			elseif o == "c" then
 				colored = true
+			elseif o == "p" then
+				showPerms = true
 			elseif o == "F" then
 				allowed.file = false
 			elseif o == "D" then
@@ -95,6 +99,13 @@ function ListPath(name, path, indent, root)
 	end
 	if showType then
 		io.write(io.stdout, " ", kind)
+	end
+	if showPerms then
+		local perms = "rw"
+		if io.readonly(path) then
+			perms = "r"
+		end
+		io.write(io.stdout, " ", perms)
 	end
 	io.write(io.stdout, '\n')
 	io.flush(io.stdout)

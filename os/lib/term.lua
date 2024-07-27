@@ -16,6 +16,13 @@ function term.send(...)
 	io.flush(io.stdout)
 end
 
+function term.readPassword()
+	term.send("P*")
+	local line = io.read(io.stdin, "l")
+	term.send("P")
+	return line
+end
+
 function term.setForeground(r, g, b)
 	return term.send('F', r, ';', g, ';', b)
 end
