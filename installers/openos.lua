@@ -84,6 +84,7 @@ local function downloadFile(link)
 
 	local handle = internet.request(link)
 	for chunk in handle do result = result .. chunk end
+	handle:close()
 
 	return result
 end
@@ -148,17 +149,15 @@ writeDataToFile("/etc/symtab", "")
 local usertab = ""
 local users = {}
 
-local term = require("term")
-
 print("Create Administrator user")
 io.write("Username: ")
 local name = io.read("l")
 local password
 while true do
 	io.write("Password: ")
-	password = term.read(nil, nil, nil, "*")
+	password = io.read("l")
 	io.write("Password (again): ")
-	local pass2 = term.read(nil,nil,nil,"*")
+	local pass2 = io.read("l")
 	if password == pass2 then break end
 	print("Passwords don't match! Try again.")
 end
@@ -174,9 +173,9 @@ while true do
 	local password
 	while true do
 		io.write("Password: ")
-		password = term.read(nil, nil, nil, "*")
+		password = io.read("l")
 		io.write("Password (again): ")
-		local pass2 = term.read(nil,nil,nil,"*")
+		local pass2 = io.read("l")
 		if password == pass2 then break end
 		print("Passwords don't match! Try again.")
 	end
@@ -204,7 +203,7 @@ local base64file = readFile("/os/drivers/data/base64.lua")
 
 local base64 = load(base64file, "=base64", "bt")()
 
-local sha256file = readFile("/os/drivers/data/base64.lua")
+local sha256file = readFile("/os/drivers/data/sha256.lua")
 
 local sha256 = load(sha256file, "=sha256", "bt")()
 
@@ -218,3 +217,34 @@ for i = 1,#users do
 end
 
 writeDataToFile("/etc/usertab", usertab)
+
+print("Set the label of the drive to FrostOS?")
+io.write("y/N: ")
+ans = io.read("l")
+
+if ans:lower() == "y" then
+	chosendriveproxy.setLabel("FrostOS")
+else
+	print("Would you like to set a custom label?")
+	io.write("y/N: ")
+	ans = io.read("l")
+
+	if ans:lower() == "y" then
+		io.write("New label: ")
+
+		local newlabel = io.read("l")
+
+		local setTo = chosendriveproxy.setLabel(newlabel)
+
+		print("Label set to " .. setTo)
+	end
+end
+
+print("You should probably reboot now, if you want to try FrostOS.")
+io.write("Reboot? Y/n")
+
+ans = io.read()
+
+if ans:lower() == "n" then return end
+
+computer.shutdown(true)

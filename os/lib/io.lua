@@ -91,6 +91,7 @@ end
 function io.flush(file)
     file = file or io.stdout
 
+    if #file.buffer == 0 then return end
     syscalls.fwrite(file.fd, file.buffer)
     file.buffer = ""
     file.bufidx = 1
@@ -136,6 +137,11 @@ end
 function io.read(file, mode)
     if type(file) == "string" then
         return io.read(io.stdin, file)
+    end
+
+    if file == io.stdin then
+    	io.stdout:flush()
+     	io.stderr:flush()
     end
 
     mode = mode or "l"
