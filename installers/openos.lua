@@ -138,12 +138,12 @@ for i,v in ipairs(list) do
 	end
 end
 
-print("Making directory /etc...")
-chosendriveproxy.makeDirectory("/etc")
+print("Making directory /os/etc...")
+chosendriveproxy.makeDirectory("/os/etc")
 
 print("Creating empty fstab and symtab")
-writeDataToFile("/etc/fstab", "")
-writeDataToFile("/etc/symtab", "")
+writeDataToFile("/os/etc/fstab", "")
+writeDataToFile("/os/etc/symtab", "")
 
 local usertab = ""
 local users = {}
