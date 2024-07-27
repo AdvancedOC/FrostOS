@@ -112,6 +112,7 @@ function InstallOS()
 			process.join(copyProc)
 			process.kill(copyProc) -- To free up the resources
 		end
+		coroutine.yield()
 	end
 
 	print("Creating directory " .. outdir .. "/etc")
