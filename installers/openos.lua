@@ -90,8 +90,12 @@ end
 print("Downloading the list of files to install from github...")
 local toInstall = downloadFile(repository .. "/os_toinstall")
 
+local function escape_pattern(text)
+    return text:gsub("([^%w])", "%%%1")
+end
+
 local function splitString(inputstr, sep)
-    sep=string.escape_pattern(sep)
+    sep=escape_pattern(sep)
     local t={}
     for field,s in string.gmatch(inputstr, "([^"..sep.."]*)("..sep.."?)") do
         table.insert(t,field)
