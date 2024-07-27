@@ -26,7 +26,7 @@ local function internet_download(proc, address)
 	local fulldata = ""
 
 	while true do
-		local data = request:read(math.huge)
+		local data = request.read(math.huge)
 
 		if data then fulldata = fulldata .. data else break end
 	end

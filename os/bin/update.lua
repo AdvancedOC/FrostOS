@@ -12,14 +12,14 @@ local function downloadFile(url)
 	if not connection then
 		error("Unable to connect to " .. url)
 	end
-	connection:finishConnect()
+	connection.finishConnect()
 	local buf = ""
 	while true do
-		local data = connection:read(math.huge)
+		local data = connection.read(math.huge)
 		if not data then break end
 		buf = buf .. data
 	end
-	connection:close()
+	connection.close()
 end
 
 -- No way to do delta updates btw
