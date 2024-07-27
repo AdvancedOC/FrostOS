@@ -6,9 +6,9 @@ for c in component.list("ocelot") do
 	ocelot = c
 	break
 end
-local proxy = component.proxy(ocelot)
 
 if ocelot then
+	local proxy = component.proxy(ocelot)
 	function log(...)
 		proxy.log(table.concat({...}, ' '))
 	end
