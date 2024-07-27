@@ -115,12 +115,6 @@ function InstallOS()
 		coroutine.yield()
 	end
 
-	print("Creating directory " .. outdir .. "/os/etc")
-	io.mkdir(outdir .. "/os/etc")
-
-	print("Creating empty fstab and symtab")
-	io.close(io.open(outdir .. "/os/etc/fstab", "w"))
-	io.close(io.open(outdir .. "/os/etc/symtab", "w"))
 	SetupUsers(outdir)
 end
 

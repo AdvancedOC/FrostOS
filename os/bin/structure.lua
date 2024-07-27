@@ -1,4 +1,4 @@
--- To update the /os_install file open FrostOS and probably run structure / -i /.git -i /tmp -i /mnt -i /os/etc -i /os/eeprom -i /os/eeprom_data > /os_toinstall as administrator.
+-- To update the /os_install file open FrostOS and probably run doas "structure / -i /.git -i /tmp -i /mnt -i /os/etc/usertab -i /os/eeprom -i /os/eeprom_data > /os_toinstall" as administrator.
 
 local args = ...
 

@@ -18,6 +18,7 @@ for i=1,truecount do
 end
 
 screens = nil -- safe some RAM
+gpucount = nil
 
 for i = 1,truecount do
     syscalls.graphics_setResolution(w,h,i) -- if any of them don't support this i'll cry
@@ -68,9 +69,100 @@ end
 
 local users = {}
 
+local function credentialsMatch(name, password)
+	local user = users[name]
+	if not user then return false, 3 end
+	local passhash = syscalls.data_encode64(syscalls.data_sha256(password))
+	return user.passhash == passhash, user.ring
+end
+
+local function plogin(proc, user, guess)
+	if not users[user] then return false, "Bad user" end
+	local ok, ring = credentialsMatch(user, guess)
+	if ok then
+		proc.ring = ring
+		return true, ring
+	else
+		return false, "Bad credentials"
+	end
+end
+
+local function phasuser(proc, user)
+	return users[user] ~= nil
+end
+
+local function puser(proc)
+	proc.ring = 3 -- Bring back to userland
+end
+
+table.insert(Kernel.AllDrivers, function(proc)
+	proc:defineSyscall("plogin", plogin)
+	proc:defineSyscall("puser", puser)
+end)
+
 -- TODO: Parse users
 
--- TODO: if no users, ask to create admin
+do
+	local usertabfile = io.open("os/etc/usertab", "r")
+	if not usertabfile then error("No user tables! What now?") end -- TODO: make empty usertab
+
+	local usertab = usertabfile:read("a")
+	usertabfile:close()
+
+	local lines = string.split(usertab,"\n")
+	local buf = {}
+	local segments = {}
+	for i = 1,#lines do
+		local line = lines[i]
+
+		local k = 1
+		while k <= #line do
+			local char = line:sub(k,k)
+
+			if char == '"' then
+				k = k + 1
+				local strstart = k
+				while line:sub(k,k) ~= '"' and line:sub(k,k) ~= "" do
+					k = k + 1
+				end
+
+				buf[#buf+1] = line:sub(strstart,k-1) -- k-1 because we're on the "
+			elseif char == " " then
+				segments[#segments+1] = table.concat(buf)
+				table.clear(buf)
+			else
+				local start = k
+				while line:sub(k,k) ~= '"' and line:sub(k,k) ~= " " do
+					k = k + 1
+				end
+
+				k = k - 1 -- DO NOT skip the character after the bit of shit
+				buf[#buf+1] = line:sub(start,k)
+			end
+
+			k = k + 1
+		end
+
+		if #buf > 0 then segments[#segments+1] = table.concat(buf) table.clear(buf) end
+
+		if #segments < 3 then
+			log(tostring(segments[1]) .. " " .. tostring(segments[2]) .. " " .. tostring(segments[3]))
+			error("Invalid user in usertab! What now?") -- TODO: make it not die completely
+		end
+
+		local name = segments[1]
+		local password = segments[2]
+		local ring = tonumber(segments[3])
+
+		if not ring then error("Ring is not a number for user " .. name .. "! What now?") end -- maybe default to 3?
+
+		users[name] = {passhash = password, ring = ring}
+
+		log("Loaded user " .. name)
+
+		table.clear(segments)
+	end
+end
 
 -- TODO: Login
 

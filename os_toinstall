@@ -11,6 +11,7 @@ file /os/kernel/utils.lua
 file /os/kernel/events.lua
 directory /os/drivers
 file /os/drivers/keyboard.lua
+file /os/drivers/internet.lua
 file /os/drivers/computer.lua
 file /os/drivers/eeprom.lua
 file /os/drivers/graphics.lua
@@ -19,7 +20,9 @@ file /os/drivers/data/sha256.lua
 file /os/drivers/data/base64.lua
 file /os/drivers/data.lua
 file /os/drivers/debug.lua
-file /os/drivers/internet.lua
+directory /os/etc
+file /os/etc/symtab
+file /os/etc/fstab
 file /os/kernel.lua
 directory /os/bin
 file /os/bin/mem.lua
@@ -29,6 +32,7 @@ file /os/bin/ptree.lua
 file /os/bin/flash.lua
 file /os/bin/benchmark.lua
 file /os/bin/structure.lua
+file /os/bin/doas.lua
 file /os/bin/cat.lua
 file /os/bin/install.lua
 file /os/bin/mkdir.lua
@@ -39,10 +43,10 @@ file /os/bin/energy.lua
 file /os/bin/resize.lua
 file /os/bin/ld.lua
 file /os/bin/rm.lua
+file /os/bin/update.lua
 file /os/bin/clear.lua
 file /os/bin/shutdown.lua
 file /os/bin/ls.lua
-file /os/bin/update.lua
 directory /os/lib
 file /os/lib/io.lua
 file /os/lib/pool.lua
@@ -60,3 +64,5 @@ directory /usr/etc
 file /usr/etc/.scuterc
 directory /usr/bin
 file /usr/bin/forkbomb.lua
+symlink /usr/bin/env.lua
+symlink /usr/bin/sh.lua

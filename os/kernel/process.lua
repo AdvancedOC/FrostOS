@@ -223,6 +223,7 @@ function Process:resumeThreads()
          	return
         end
         if not good then
+        	log(tostring(err) .. debug.traceback(thread))
         	if self.ring == 0 then
          		error(tostring(err) .. debug.traceback(thread))
          	end

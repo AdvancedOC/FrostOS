@@ -1,7 +1,34 @@
+local args = ...
+args = args or {}
 local syscalls = require("syscalls")
 local process = require("process")
 
 local symbols = {";", ">", "|", "\n"}
+
+local summonRing = 3
+local command
+do
+	local i = 1
+	while i <= #args do
+		local arg = args[i]
+		if arg == "-r" or arg == "--ring" then
+			summonRing = tonumber(args[i+1]) or 3
+			i = i + 1
+		elseif arg == "-c" or arg == "--command" then
+			local buffer = {}
+			for j = i+1,#args do
+				buffer[#buffer+1] = args[j]
+			end
+
+			command = table.concat(buffer, " ")
+
+			break
+		end
+		i = i + 1
+	end
+end
+
+if not summonRing then summonRing = 3 end
 
 local function tableContains(tab,val)
 	for i = 1,#symbols do local sep = symbols[i] if sep == val then return true end end
@@ -209,7 +236,7 @@ local function awaitRam()
 	until syscalls.computer_freeMemory() > 10*1024
 end
 
-local function runStr(parsed)
+local function runStr(parsed,wd)
 	local runningProcs = {}
 
 	local inToUse
@@ -228,7 +255,7 @@ local function runStr(parsed)
 				local closeoutlater = false
 				if j == #pipeline.commands then
 					if parsed[i].redirection then
-						if not io.allowed(parsed[i].redirection,3,"w") then print("Can't write to " .. parsed[i].redirection .. ": Operation not permitted.") break end
+						if not io.allowed(parsed[i].redirection,summonRing,"w") then print("Can't write to " .. parsed[i].redirection .. ": Operation not permitted.") break end
 						outtouse = io.open(parsed[i].redirection, "w")
 						closeoutlater = true
 					else
@@ -263,7 +290,7 @@ local function runStr(parsed)
 							[0] = outtouse,
 							[1] = intouse,
 							[2] = io.stderr.fd,
-						}, nil, wd, 3)
+						}, nil, wd, summonRing)
 						if not proc then
 							print("Error: " .. err)
 						end
@@ -293,6 +320,17 @@ local function runStr(parsed)
 			runningProcs[i].inp:close()
 		end
 	end
+end
+
+if command then
+	local lexed,err = lex(command)
+	if not lexed then error(err) end
+
+	local parsed,err = parse(lexed)
+	if not parsed then error(err) end
+
+	runStr(parsed,process.cwd())
+	return
 end
 
 if not syscalls.computer_dangerouslyLowRAM() then -- don't load scuterc for memory reasons
@@ -343,7 +381,7 @@ while true do
 
 	if not parsed then print("Failed to parse command! " .. tostring(errnew)) end
 
-	runStr(parsed)
+	runStr(parsed,wd)
 
 	coroutine.yield()
 end

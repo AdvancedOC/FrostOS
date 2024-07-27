@@ -42,16 +42,10 @@ addProtectedPath("/os/lib", {
   a = 2,
 })
 
-addProtectedPath("/os/etc/usertab", {
-  r = 2,
-  w = 2,
-  a = 2,
-})
-
 addProtectedPath("/os/etc", {
-  r = 3,
-  w = 2,
-  a = 2,
+  r = 1,
+  w = 0,
+  a = 0,
 })
 
 addProtectedPath("/os/drivers", {

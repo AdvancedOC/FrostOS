@@ -290,7 +290,7 @@ end
 awaitRam()
 
 
-local shell = "/os/bin/scute.lua"
+local shell = "/usr/bin/sh.lua" -- symlink to the actual shell, usually scute
 
 local shellProc = process.spawn("Shell " .. shell, {
 	[0] = io.stdout.fd,
