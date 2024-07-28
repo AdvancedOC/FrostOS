@@ -31,43 +31,36 @@ function addProtectedPath(path, protection)
 end
 
 addProtectedPath("/os/bin", {
-  r = 3,
   w = 2,
   a = 2,
 })
 
 addProtectedPath("/os/lib", {
-  r = 3,
   w = 2,
   a = 2,
 })
 
 addProtectedPath("/os/etc", {
-  r = 1,
   w = 0,
   a = 0,
 })
 
 addProtectedPath("/os/drivers", {
-  r = 3,
   w = 2,
   a = 2,
 })
 
 addProtectedPath("/os", {
-	r = 3,
   w = 1,
   a = 1,
 })
 
 addProtectedPath("/init.lua", {
-	r = 3,
 	w = 1,
 	a = 1,
 })
 
 addProtectedPath("/", {
-	r = 3,
 	w = 3,
 	a = 3,
 })
