@@ -41,6 +41,7 @@ addProtectedPath("/os/lib", {
 })
 
 addProtectedPath("/os/etc", {
+	r = 1,
   w = 0,
   a = 0,
 })
