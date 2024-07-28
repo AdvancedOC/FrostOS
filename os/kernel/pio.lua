@@ -66,6 +66,12 @@ addProtectedPath("/init.lua", {
 	a = 1,
 })
 
+addProtectedPath("/", {
+	r = 3,
+	w = 3,
+	a = 3,
+})
+
 pio = {}
 
 function pio.canonical(process, path)
