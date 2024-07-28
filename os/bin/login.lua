@@ -277,6 +277,7 @@ do
 					if credentialsMatch(user, "") then
 						-- Unsecured user, just log in
 						loggedInUser = user
+						syscalls.plogin(loggedInUser, "")
 						break
 					else
 						-- We need a password
