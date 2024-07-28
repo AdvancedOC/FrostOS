@@ -11,14 +11,9 @@ for i=1,#args do
 	cargs[i-1] = args[i]
 end
 
-if not cmd then
-	print("No command")
-	return
-end
-
 local function spawnProcess(ring)
-	local child = process.spawn("DOAS (" .. user .. "): " .. cmd, nil, nil, nil, ring)
-	local ok, err = process.exec(child, "/usr/bin/sh.lua", {[0] = "/usr/bin/sh", "-r", tostring(ring), "-c", cmd, table.unpack(cargs)})
+	local child = process.spawn("DOAS (" .. user .. "): " .. (cmd or "Shell"), nil, nil, nil, ring)
+	local ok, err = process.exec(child, "/usr/bin/sh.lua", (not cmd) and {[0] = "/usr/bin/sh.lua", "-r", tostring(ring)} or {[0] = "/usr/bin/sh.lua", "-r", tostring(ring), "-c", cmd, table.unpack(cargs)})
 	if not ok then
 		error("Error: " .. err)
 	end

@@ -217,6 +217,10 @@ function builtin.which(args, stdout, stdin)
 	end
 end
 
+function builtin.exit(args, stdout, stdin)
+	process.exit()
+end
+
 function which(command)
 	if builtin[command] then return builtin[command] end
 

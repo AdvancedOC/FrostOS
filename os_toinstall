@@ -45,6 +45,7 @@ file /os/bin/ld.lua
 file /os/bin/rm.lua
 file /os/bin/update.lua
 file /os/bin/clear.lua
+file /os/bin/ring.lua
 file /os/bin/shutdown.lua
 file /os/bin/ls.lua
 directory /os/lib
@@ -53,8 +54,6 @@ file /os/lib/pool.lua
 file /os/lib/process.lua
 file /os/lib/thread.lua
 file /os/lib/term.lua
-directory /installers
-file /installers/openos.lua
 file /os_toinstall
 file /.osprop
 file /README.md
@@ -64,5 +63,5 @@ directory /usr/etc
 file /usr/etc/.scuterc
 directory /usr/bin
 file /usr/bin/forkbomb.lua
-symlink /usr/bin/env.lua
 symlink /usr/bin/sh.lua
+symlink /usr/bin/env.lua

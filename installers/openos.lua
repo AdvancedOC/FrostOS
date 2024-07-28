@@ -142,8 +142,7 @@ local usertab = ""
 local users = {}
 
 print("Create Administrator user")
-io.write("Username: ")
-local name = io.read("l")
+local name = "admin"
 local password
 while true do
 	io.write("Password: ")
@@ -190,7 +189,7 @@ local function readFile(path)
 	return fulldata
 end
 
-print("Loading base64 and sha256 libraries...")
+print("Loading base64 and sha256 libraries from downloaded files...")
 local base64file = readFile("/os/drivers/data/base64.lua")
 
 local base64 = load(base64file, "=base64", "bt")()

@@ -39,6 +39,10 @@ function gio.isReadOnly(disk)
 	return component.invoke(disk, 'isReadOnly')
 end
 
+function gio.registerDeviceFile(kind)
+
+end
+
 
 ---@return string, string
 local function getPathInfo(path)

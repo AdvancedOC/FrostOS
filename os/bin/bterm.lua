@@ -289,6 +289,13 @@ end
 -- syscalls.computer_gc(8*1024,20)
 awaitRam()
 
+local env = process.getenvs()
+
+env.AUTH = tonumber(env.AUTH) or 3 -- being careful
+
+if env.AUTH == 0 then
+	print("Be careful! You're running at ring 0, which means you have the permissions to do anything.")
+end
 
 local shell = "/usr/bin/sh.lua" -- symlink to the actual shell, usually scute
 
@@ -296,9 +303,9 @@ local shellProc = process.spawn("Shell " .. shell, {
 	[0] = io.stdout.fd,
 	[1] = io.stdin.fd,
 	[2] = io.stdout.fd, -- (TODO:) stderr
-}, nil, "/home")
+}, nil, "/home", math.min(env.AUTH,2))
 
-local ok, err = process.exec(shellProc, shell)
+local ok, err = process.exec(shellProc, shell, {[0] = shell, "-r", tostring(env.AUTH)})
 if not ok then print("Error: " .. err) end
 
 while true do

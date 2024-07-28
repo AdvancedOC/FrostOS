@@ -1,3 +1,5 @@
+BeforeBoot = computer.totalMemory() - computer.freeMemory()
+
 -- This is the kernel loadfile.
 -- This should ONLY be accessible to the kernel.
 function loadfile(file)

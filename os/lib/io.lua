@@ -272,5 +272,10 @@ function io.islink(path)
 end
 
 function print(...)
-    io.write(io.stdout, table.concat({...}, '\t'), '\n')
+	local n = select("#", ...)
+	for i=1,n do
+		local v = select(i, ...)
+		io.write(io.stdout, tostring(v))
+	end
+	io.write(io.stdout, '\n')
 end

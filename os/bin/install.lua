@@ -8,9 +8,7 @@ function SetupUsers(outdir)
 	local users = {}
 
 	print("Create Administrator user")
-	io.write('Username: ')
-	io.flush()
-	local name = io.read("l")
+	local name = "admin"
 	local password
 	while true do
 		io.write('Password: ')
@@ -92,7 +90,7 @@ function InstallOS()
 	print("Computing Operating System structure...")
 	local structureBuffer = io.memory("", "rw")
 	local structureProc = process.spawn("Install: Find OS structure", {[0] = structureBuffer.fd})
-	local ok, err = process.exec(structureProc, "/os/bin/structure.lua", {"/", "-i", "/.git", "-i", "/tmp", "-i", "/mnt", "-i", "/os/etc", "-i", "/installers"})
+	local ok, err = process.exec(structureProc, "/os/bin/structure.lua", {"/", "-i", "/.git", "-i", "/installers", "-i", "/os_toinstall", "-i", "/tmp", "-i", "/mnt", "-i", "/os/etc/usertab", "-i", "/installers"})
 	if not ok then print("Error: " .. err) return end
 	process.join(structureProc)
 	io.seek(structureBuffer, "set", 0)
@@ -106,11 +104,27 @@ function InstallOS()
 			io.mkdir(outdir .. dirpath)
 		elseif string.startswith(line, "file") then
 			local filepath = line:sub(6)
-			local copyProc = process.spawn("Install: Copy " .. filepath)
-			local ok, err = process.exec(copyProc, "/os/bin/cp.lua", {filepath, outdir .. filepath, "-v"})
-			if not ok then print("Error: " .. err) return end
-			process.join(copyProc)
-			process.kill(copyProc) -- To free up the resources
+			local outpath = outdir .. filepath
+			print("Copying file " .. filepath .. " into " .. outpath)
+			local input, err = io.open(filepath, "r")
+			if not input then
+				print("Unable to open " .. filepath .. ": " .. err)
+				return
+			end
+			local out, err = io.open(outpath, "w")
+			if not out then
+				print("Unable to open " .. outpath .. ": " .. err)
+				return
+			end
+			while true do
+				local data = io.read(input, "a")
+				if not data then break end
+				io.write(out, data)
+				coroutine.yield()
+			end
+			io.flush(out)
+			io.close(input)
+			io.close(out)
 		end
 		coroutine.yield()
 	end

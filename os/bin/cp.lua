@@ -113,11 +113,11 @@ function Copy(from, into)
 			print("Unable to open " .. into .. ": " .. err)
 			return
 		end
-		local chunkSize = 64
 		while true do
-			local data = io.read(input, chunkSize)
+			local data = io.read(input, math.huge)
 			if not data then break end
 			io.write(out, data)
+			coroutine.yield()
 		end
 		io.flush(out)
 		io.close(input)

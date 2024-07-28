@@ -14,7 +14,7 @@ for i=1,#args do
 			if o == "r" then
 				recursive = true
 			elseif o == "v" then
-				verbose = false
+				verbose = true
 			else
 				print("Unknown option: " .. o)
 				return
@@ -50,7 +50,7 @@ function Remove(path)
 				end
 			end
 			if io.isDirectory(path) then
-				print("Deleting " .. path .. "...")
+				if verbose then print("Deleting " .. path .. "...") end
 				io.remove(path)
 			end
 		end

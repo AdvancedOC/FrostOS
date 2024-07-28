@@ -39,7 +39,6 @@ syscalls.graphics_setForeground(0xFFFFFF)
 syscalls.graphics_setBackground(0x000000)
 
 clearScreens()
-clearScreens = nil
 
 local function addWarning(warning)
 	j = j + 1
@@ -95,10 +94,16 @@ local function puser(proc)
 	proc.ring = 3 -- Bring back to userland
 end
 
-table.insert(Kernel.AllDrivers, function(proc)
+local function defineSyscalls(proc)
 	proc:defineSyscall("plogin", plogin)
 	proc:defineSyscall("puser", puser)
-end)
+end
+
+table.insert(Kernel.AllDrivers, defineSyscalls)
+local pid = process.current()
+defineSyscalls(Kernel.allProcs[pid])
+
+local loginRing = process.info(pid).ring
 
 -- TODO: Parse users
 
@@ -115,59 +120,185 @@ do
 	for i = 1,#lines do
 		local line = lines[i]
 
-		local k = 1
-		while k <= #line do
-			local char = line:sub(k,k)
-
-			if char == '"' then
+		if #line > 0 then
+			local k = 1
+			while k <= #line do
+				local char = line:sub(k,k)
+	
+				if char == '"' then
+					k = k + 1
+					local strstart = k
+					while line:sub(k,k) ~= '"' and line:sub(k,k) ~= "" do
+						k = k + 1
+					end
+	
+					buf[#buf+1] = line:sub(strstart,k-1) -- k-1 because we're on the "
+				elseif char == " " then
+					segments[#segments+1] = table.concat(buf)
+					table.clear(buf)
+				else
+					local start = k
+					while line:sub(k,k) ~= '"' and line:sub(k,k) ~= " " and line:sub(k,k) ~= "" do
+						k = k + 1
+					end
+	
+					k = k - 1 -- DO NOT skip the character after the bit of shit
+					buf[#buf+1] = line:sub(start,k)
+				end
+	
 				k = k + 1
-				local strstart = k
-				while line:sub(k,k) ~= '"' and line:sub(k,k) ~= "" do
-					k = k + 1
-				end
-
-				buf[#buf+1] = line:sub(strstart,k-1) -- k-1 because we're on the "
-			elseif char == " " then
-				segments[#segments+1] = table.concat(buf)
-				table.clear(buf)
-			else
-				local start = k
-				while line:sub(k,k) ~= '"' and line:sub(k,k) ~= " " do
-					k = k + 1
-				end
-
-				k = k - 1 -- DO NOT skip the character after the bit of shit
-				buf[#buf+1] = line:sub(start,k)
 			end
-
-			k = k + 1
+	
+			if #buf > 0 then segments[#segments+1] = table.concat(buf) table.clear(buf) end
+	
+			if #segments < 3 then
+				log(tostring(segments[1]) .. " " .. tostring(segments[2]) .. " " .. tostring(segments[3]))
+				error("Invalid user in usertab! What now?") -- TODO: make it not die completely
+			end
+	
+			local name = segments[1]
+			local password = segments[2]
+			local ring = tonumber(segments[3])
+	
+			if not ring then error("Ring is not a number for user " .. name .. "! What now?") end -- maybe default to 3?
+	
+			users[name] = {passhash = password, ring = ring}
+	
+			log("Loaded user " .. name)
+	
+			table.clear(segments)
 		end
-
-		if #buf > 0 then segments[#segments+1] = table.concat(buf) table.clear(buf) end
-
-		if #segments < 3 then
-			log(tostring(segments[1]) .. " " .. tostring(segments[2]) .. " " .. tostring(segments[3]))
-			error("Invalid user in usertab! What now?") -- TODO: make it not die completely
-		end
-
-		local name = segments[1]
-		local password = segments[2]
-		local ring = tonumber(segments[3])
-
-		if not ring then error("Ring is not a number for user " .. name .. "! What now?") end -- maybe default to 3?
-
-		users[name] = {passhash = password, ring = ring}
-
-		log("Loaded user " .. name)
-
-		table.clear(segments)
 	end
 end
 
 -- TODO: Login
 
+local loggedInUser
+local passwordBuf = ""
+
+do
+	local menu = 1
+	local userlist = {}
+
+	for k,v in pairs(users) do userlist[#userlist+1] = k end
+	table.sort(userlist)
+
+	local unit = "MiB"
+	local divisor = 1024*1024
+	if syscalls.computer_totalMemory() < 1024*1024 then divisor = 1024 unit = "KiB" end
+	local function round(x) return math.floor(x*10 + 0.5)/10 end
+
+	clearScreens()
+
+	local items = {}
+	local cursor = 1
+
+	for i, user in ipairs(userlist) do
+		items[i] = user
+	end
+
+	local msg = "Logging In"
+
+	while true do
+		for i = 1,truecount do
+			syscalls.graphics_fill(1, 1, w, 1, " ", i)
+			syscalls.graphics_set(1,1,"FrostOS",i)
+
+			local rawtotal = syscalls.computer_totalMemory()
+			local rawfree =syscalls.computer_freeMemory()
+
+			local totalmem = round(rawtotal/divisor)
+			local usedmem = round((rawtotal-rawfree)/divisor)
+
+			local memstr =  "MEM " .. tostring(usedmem) .. " " .. unit .. " / " .. tostring(totalmem) .. " " .. unit
+			syscalls.graphics_set(w-#memstr,1, memstr,i)
+
+			syscalls.graphics_fill(1,h,w,1," ", i)
+			syscalls.graphics_set(1,h,msg,i)
+		end
+		local center = math.floor(w/2)
+
+		for i = 1,#items do
+			local item = items[i]
+
+			for k = 1,truecount do
+				if cursor == i then
+					syscalls.graphics_setForeground(0x000000)
+					syscalls.graphics_setBackground(0xFFFFFF)
+				end
+				syscalls.graphics_fill(1,i+3,w,1," ", k)
+				syscalls.graphics_set(center - math.floor(#item/2),i+3,item,k)
+				if cursor == i then
+					syscalls.graphics_setForeground(0xFFFFFF)
+					syscalls.graphics_setBackground(0x000000)
+				end
+			end
+		end
+		if loggedInUser then
+			if syscalls.keyboard_isKeyPressed("enter") then
+				if credentialsMatch(loggedInUser, passwordBuf) then
+					-- Oh look, we logged in!
+					if users[loggedInUser].ring < loginRing then
+						-- Escape login's priviliges
+						syscalls.plogin(loggedInUser, passwordBuf)
+					end
+					break
+				else
+					passwordBuf = ""
+					msg = "Try again"
+				end
+			elseif syscalls.keyboard_isKeyPressed("escape") or syscalls.keyboard_isKeyPressed("home") then
+				loggedInUser = nil -- User decided to go away
+				passwordBuf = ""
+				msg = "Logging In"
+			elseif syscalls.keyboard_isKeyPressed("backspace") then
+				passwordBuf = passwordBuf:sub(1, -2)
+			elseif syscalls.keyboard_isKeyPressed("delete") then
+				passwordBuf = ""
+			else
+				local text = syscalls.keyboard_getText()
+				passwordBuf = passwordBuf .. text
+				msg = "Password: " .. string.rep("*", #passwordBuf)
+			end
+		else
+			if syscalls.keyboard_isKeyPressed("down") then
+				cursor = cursor + 1
+				if cursor > #items then cursor = 1 end
+			end
+			if syscalls.keyboard_isKeyPressed("up") then
+				cursor = cursor - 1
+				if cursor < 1 then cursor = #items end
+			end
+			if syscalls.keyboard_isKeyPressed("enter") then
+				if menu == 1 then
+					-- We're gonna need to login
+					local user = items[cursor]
+
+					if credentialsMatch(user, "") then
+						-- Unsecured user, just log in
+						loggedInUser = user
+						break
+					else
+						-- We need a password
+						loggedInUser = user
+						passwordBuf = ""
+						msg = "Password: "
+					end
+				end
+			end
+		end
+
+
+		coroutine.yield()
+	end
+end
+
+assert(loggedInUser, "Login must log in as a user")
+
 local extraStuff = {
 	HOME = "/home",
+	USER = loggedInUser,
+	AUTH = tostring(users[loggedInUser].ring),
 }
 
 repeat
@@ -178,7 +309,7 @@ until syscalls.computer_freeMemory() > 8*1024
 local env = "/os/bin/bterm.lua"
 
 log("Spawning environment process")
-local term, err = process.spawn("Environment " .. env, nil, extraStuff, extraStuff.HOME, 2)
+local term, err = process.spawn("Environment " .. env, nil, extraStuff, extraStuff.HOME, math.min(2, users[loggedInUser].ring))
 if not term then log("Error: " .. err) addWarning("Error: " .. err) end
 
 log("Running environment " .. env)

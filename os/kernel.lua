@@ -6,10 +6,10 @@ function log(...)
 end
 
 dofile("os/kernel/utils.lua")
+dofile("os/kernel/events.lua")
 dofile("os/kernel/gio.lua")
 dofile("os/kernel/pio.lua")
 dofile("os/kernel/process.lua")
-dofile("os/kernel/events.lua")
 dofile("os/kernel/scheduler.lua")
 
 for _, driver in ipairs(gio.list("/os/drivers")) do
@@ -19,6 +19,8 @@ for _, driver in ipairs(gio.list("/os/drivers")) do
 end
 
 log("Memory Conservative:", tostring(MemoryConservative))
+log("Initial memory usage: ", tostring(computer.totalMemory() - computer.freeMemory()))
+log("OpenComputers cost: ", tostring(BeforeBoot))
 
 -- Init is PID 0, (guaranteed). It has no parent
 Init = Process.spawn(nil, "krnl", "/", nil, nil, nil, {}, 0)
