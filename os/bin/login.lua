@@ -5,8 +5,8 @@ local screens = syscalls.graphics_getScreens()
 
 local gpucount = syscalls.graphics_gpuCount()
 
-local w = 60
-local h = 20
+local w = math.huge
+local h = math.huge
 
 local truecount = math.min(#screens,gpucount) -- if you have more screens than gpus you can't, and you also don't need multiple gpus on a single screen
 
@@ -124,14 +124,14 @@ do
 			local k = 1
 			while k <= #line do
 				local char = line:sub(k,k)
-	
+
 				if char == '"' then
 					k = k + 1
 					local strstart = k
 					while line:sub(k,k) ~= '"' and line:sub(k,k) ~= "" do
 						k = k + 1
 					end
-	
+
 					buf[#buf+1] = line:sub(strstart,k-1) -- k-1 because we're on the "
 				elseif char == " " then
 					segments[#segments+1] = table.concat(buf)
@@ -141,31 +141,31 @@ do
 					while line:sub(k,k) ~= '"' and line:sub(k,k) ~= " " and line:sub(k,k) ~= "" do
 						k = k + 1
 					end
-	
+
 					k = k - 1 -- DO NOT skip the character after the bit of shit
 					buf[#buf+1] = line:sub(start,k)
 				end
-	
+
 				k = k + 1
 			end
-	
+
 			if #buf > 0 then segments[#segments+1] = table.concat(buf) table.clear(buf) end
-	
+
 			if #segments < 3 then
 				log(tostring(segments[1]) .. " " .. tostring(segments[2]) .. " " .. tostring(segments[3]))
 				error("Invalid user in usertab! What now?") -- TODO: make it not die completely
 			end
-	
+
 			local name = segments[1]
 			local password = segments[2]
 			local ring = tonumber(segments[3])
-	
+
 			if not ring then error("Ring is not a number for user " .. name .. "! What now?") end -- maybe default to 3?
-	
+
 			users[name] = {passhash = password, ring = ring}
-	
+
 			log("Loaded user " .. name)
-	
+
 			table.clear(segments)
 		end
 	end
@@ -318,6 +318,8 @@ local ok, err = process.exec(term, env)
 if not ok then log("Error: " .. err) addWarning("Error: " .. err) end
 
 if syscalls.computer_dangerouslyLowRAM() then process.exit() end
+
+syscalls.computer_cleanMemory()
 
 while true do
 	if process.status(term) == "dead" then

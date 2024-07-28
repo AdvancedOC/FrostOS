@@ -24,6 +24,7 @@ local function downloadFile(url)
 end
 
 -- No way to do delta updates btw
+print("Downloading OS file structure from " .. url .. "/os_toinstall...")
 local structure = string.split(downloadFile(url .. "/os_toinstall"), '\n')
 
 for _, line in ipairs(structure) do
@@ -41,15 +42,18 @@ for _, line in ipairs(structure) do
 			end
 		end
 		if not io.exists(dir) then
+			print("Creating " .. dir)
 			local err = io.mkdir(dir)
 			if err then error("Failed to create " .. dir .. ": " .. err) end
 		end
 	elseif string.startswith(line, "file") then
 		local file = line:sub(6)
 		-- Files start with / cuz why not
+		print("Downloading " .. url .. file .. "...")
 		local contents = downloadFile(url .. file)
 		local f, err = io.open(file, "w")
 		if not f then error("Unable to open " .. file .. ": " .. err) end
+		print("Overwriting " .. file .. "...")
 		f:write(contents)
 		f:flush()
 		f:close()

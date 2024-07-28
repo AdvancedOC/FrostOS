@@ -27,7 +27,7 @@ local formats = {
 	mb = {1024^2, "MiB"},
 	kb = {1024, "KiB"},
 	b = {1, "B"},
-	bt = {1/8, " bits"}
+	bt = {1/8, " bits"} -- defined as bt because the i in the middle will disappear because of the code below
 }
 
 format = format:lower()

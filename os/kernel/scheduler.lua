@@ -34,7 +34,7 @@ local function component_removed(addr, kind)
 	for _, group in ipairs(allGroups[kind]) do
 		local i
 		for j, card in ipairs(group.cards) do
-			if card == addr then i = j end
+			if card == addr then i = j break end
 		end
 		if i then table.remove(group.cards, i) end
 	end

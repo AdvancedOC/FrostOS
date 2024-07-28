@@ -3,27 +3,11 @@ local syscalls = require("syscalls")
 
 local pastebin = "https://pastebin.com/raw/"
 
-local function downloadFile(url)
-	local connection = syscalls.internet_request(url)
-	if not connection then
-		error("Unable to connect to " .. url)
-	end
-	connection.finishConnect()
-	local buf = ""
-	while true do
-		local data = connection.read(math.huge)
-		if not data then break end
-		buf = buf .. data
-	end
-	connection.close()
-	return buf
-end
-
 if args[1] == "run" then
 	local path = args[2]
 
 	print("Downloading file...")
-	local filedata,err = downloadFile(pastebin .. path)
+	local filedata,err = syscalls.internet_download(pastebin .. path)
 	if not filedata then error("Couldn't download file: " .. tostring(err)) end
 
 	local temppath = "/tmp/" .. path
@@ -50,7 +34,7 @@ elseif args[1] == "get" then
 	local pastebinpath = args[2]
 	local filepath = args[3]
 
-	local filedata,err = downloadFile(pastebin .. pastebinpath)
+	local filedata,err = syscalls.internet_download(pastebin .. pastebinpath)
 	if not filedata then error("Couldn't download file: " .. tostring(err)) end
 
 	if filepath then
