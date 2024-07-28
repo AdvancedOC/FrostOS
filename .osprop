@@ -1,1 +1,1 @@
-{name="FrostOS", boot="init.lua"}
+return {name="FrostOS", boot="init.lua"}
