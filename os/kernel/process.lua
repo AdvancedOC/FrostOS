@@ -222,9 +222,9 @@ function Process:resumeThreads()
 		 	return
 		end
 		if not good then
-			log(tostring(err) .. debug.traceback(thread))
+			log(tostring(err) .. "\n" .. debug.traceback(thread))
 			if self.ring == 0 then
-		 		error(tostring(err) .. debug.traceback(thread))
+	 		error(tostring(err) .. "\n" .. debug.traceback(thread))
 		 	end
 			if self.files[2] then gio.write(self.files[2], tostring(err) .. "\n" .. debug.traceback(thread) .. "\n") end
 		 	--error(tostring(err) .. debug.traceback(thread))
