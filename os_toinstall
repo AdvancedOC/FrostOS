@@ -29,8 +29,11 @@ file /os/bin/mem.lua
 file /os/bin/scute.lua
 file /os/bin/cp.lua
 file /os/bin/ptree.lua
+file /os/bin/curl.lua
 file /os/bin/flash.lua
 file /os/bin/benchmark.lua
+file /os/bin/pastebin.lua
+file /os/bin/lua.lua
 file /os/bin/structure.lua
 file /os/bin/doas.lua
 file /os/bin/cat.lua
@@ -40,6 +43,7 @@ file /os/bin/echo.lua
 file /os/bin/login.lua
 file /os/bin/bterm.lua
 file /os/bin/energy.lua
+file /os/bin/edit.lua
 file /os/bin/resize.lua
 file /os/bin/ld.lua
 file /os/bin/rm.lua
@@ -47,6 +51,7 @@ file /os/bin/update.lua
 file /os/bin/clear.lua
 file /os/bin/ring.lua
 file /os/bin/shutdown.lua
+file /os/bin/wget.lua
 file /os/bin/ls.lua
 directory /os/lib
 file /os/lib/io.lua
