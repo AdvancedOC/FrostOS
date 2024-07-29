@@ -5,7 +5,7 @@ local url = args[1]
 local out = args[2]
 
 if not url then
-	error("No output file!")
+	error("No URL given!")
 	return
 end
 
