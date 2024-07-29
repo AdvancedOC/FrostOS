@@ -4,8 +4,9 @@ A simple and secure OpenComputers operating system.
 It comes with a basic terminal called BTerm and a basic shell named Scute.
 It supports drivers, basic filesystem utilities and running commands.
 It also has a process-based model where there can be multiple process in a process tree (visible with ptree), which can each have multiple threads.
+It supports multiple users, with a login screen on boot, and running individual commands as the admin user using ``doas``.
 
-The important things missing are the login prompt, ability to install arbitrary software from a floppy disk, and running as administrator.
+The important things missing is ability to install arbitrary software from a floppy disk.
 
 # Custom Shells and Environments
 
