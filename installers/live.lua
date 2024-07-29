@@ -89,27 +89,27 @@ ramfs.makeDirectory = function(path)
 	local cur = ""
 	for i = 1,#segs-1 do
 		cur = cur .. segs[i]
-		if not ramfs[cur] then ramfs[cur] = true end
+		if not ramfs.files[cur] then ramfs.files[cur] = true end
 		cur = cur .. "/"
 	end
 
 	cur = cur .. segs[#segs]
 
-	ramfs[cur] = true -- define it as a folder
+	ramfs.files[cur] = true -- define it as a folder
 	return true
 end
 
 ramfs.isDirectory = function(path)
 	path = fixPath(path)
 
-	return ramfs[path] == true
+	return ramfs.files[path] == true
 end
 
 ramfs.open = function(path,mode)
 	mode = mode or "r"
 	path = fixPath(path)
 
-	if string.contains(mode,"r") and type(ramfs[path]) ~= "string" then return nil end
+	if string.contains(mode,"r") and type(ramfs.files[path]) ~= "string" then return nil end
 
 	return {
 		path = path,
@@ -124,10 +124,10 @@ end
 
 ramfs.read = function(handle, amount)
 	handle.i = handle.i or 1
-	amount = math.min(amount,#ramfs[handle.path] - handle.i + 1)
+	amount = math.min(amount,#ramfs.files[handle.path] - handle.i + 1)
 
-	if handle.i <= #ramfs[handle.path] then
-		local data = ramfs[handle.path]:sub(handle.i,handle.i+amount - 1)
+	if handle.i <= #ramfs.files[handle.path] then
+		local data = ramfs.files[handle.path]:sub(handle.i,handle.i+amount - 1)
 		handle.i = handle.i + amount
 		return data
 	end
@@ -141,32 +141,32 @@ ramfs.seek = function(handle, whence, offset)
 	elseif whence == "cur" then
 		handle.i = handle.i + offset
 	elseif whence == "end" then
-		handle.i = #ramfs[handle.path] - offset
+		handle.i = #ramfs.files[handle.path] - offset
 	end
 
-	handle.i = math.min(math.max(offset,1),#ramfs[handle.path] + 1)
+	handle.i = math.min(math.max(offset,1),#ramfs.files[handle.path] + 1)
 
 	return handle.i
 end
 
 ramfs.close = function(handle)
 	if string.contains(handle.mode, "w") then
-		ramfs[handle.path] = table.concat(handle.buf)
+		ramfs.files[handle.path] = table.concat(handle.buf)
 	end
 end
 
 ramfs.exists = function(path)
 	path = fixPath(path)
 
-	return ramfs[path] ~= nil
+	return ramfs.files[path] ~= nil
 end
 
 ramfs.rename = function(path,topath)
 	path = fixPath(path)
 	topath = fixPath(topath)
 
-	ramfs[topath] = ramfs[path]
-	ramfs[path] = nil
+	ramfs.files[topath] = ramfs.files[path]
+	ramfs.files[path] = nil
 end
 
 ramfs.list = function(path)
@@ -174,9 +174,9 @@ ramfs.list = function(path)
 
 	local parts = string.split(path,"/")
 
-	-- error(path .. "   " .. tostring(ramfs[path]))
+	-- error(path .. "   " .. tostring(ramfs.files[path]))
 
-	if ramfs[path] ~= true then
+	if ramfs.files[path] ~= true then
 		return {}
 	end
 
@@ -184,7 +184,7 @@ ramfs.list = function(path)
 
 	local items = {}
 
-	for k,v in pairs(ramfs) do
+	for k,v in pairs(ramfs.files) do
 		if string.startswith(k,startcheck) then
 			local newparts = string.split(k,"/")
 
@@ -205,16 +205,16 @@ ramfs.remove = function(path)
 	path = fixPath(path)
 	local succ = true
 
-	if ramfs[path] then
+	if ramfs.files[path] then
 		if ramfs.isDirectory(path) then
 			local children = ramfs.list(path)
 			for i,v in ipairs(children) do
-				if not ramfs.remove(path .. "/" .. v) then succ = false end
+				if not ramfs.remove(path .. "/" .. v) then succ = false break end
 			end
 
-			ramfs[path] = nil
+			if succ then ramfs.files[path] = nil end
 		else
-			ramfs[path] = nil
+			ramfs.files[path] = nil
 		end
 	else
 		succ = false
@@ -288,7 +288,7 @@ local function downloadFileAndWrite(url,path)
 	path = fixPath(path)
 	local data = downloadFile(url)
 
-	ramfs[path] = data -- i could do handles and everything but like... why not just this
+	ramfs.files[path] = data -- i could do handles and everything but like... why not just this
 end
 
 local repo = "https://raw.githubusercontent.com/AdvancedOC/FrostOS/main"
@@ -306,12 +306,12 @@ for i, line in ipairs(lines) do
 	if string.startswith(line, "file ") then
 		local filepath = line:sub(6)
 
-		printMsg("Downloading file " .. filepath)
+		printMsg("Downloading file " .. filepath .. "...")
 		downloadFileAndWrite(repo .. filepath, filepath)
 	elseif string.startswith(line, "directory ") then
 		local dirpath = line:sub(11)
 
-		printMsg("Making directory " .. dirpath)
+		printMsg("Making directory " .. dirpath .. "...")
 
 		ramfs.makeDirectory(dirpath)
 	end
@@ -321,7 +321,7 @@ printMsg("Making usertab...")
 
 local usertab = [["admin" "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=" 0]]
 -- ^ this is a constant string because loading the base64 & sha256 libaries is extra work for no reason
-ramfs["/os/etc/usertab"] = usertab
+ramfs.files["/os/etc/usertab"] = usertab
 
 local coroutine = coroutine
 
@@ -366,7 +366,7 @@ end
 
 printMsg("Trying to boot FrostOS...")
 
-local initfiledata = ramfs["/init.lua"]
+local initfiledata = ramfs.files["/init.lua"]
 
 local loaded,err = load(initfiledata,"=init.lua","bt",environment)
 
