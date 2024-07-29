@@ -14,6 +14,10 @@ local w,h = component.invoke(gpu, "maxResolution")
 
 component.invoke(gpu, "setResolution", w, h)
 
+component.invoke(gpu, "setForeground", 0xFFFFFF)
+component.invoke(gpu, "setBackground", 0x000000)
+component.invoke(gpu, "fill", 1, 1, w, h, " ")
+
 local y = 1
 local function printMsg(msg)
 	if y == h+1 then
