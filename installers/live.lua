@@ -3,6 +3,8 @@
 local component = component or require("component") -- support OpenOS because why the heck not
 local computer = computer or require("computer")
 
+local is_openos = (package.loaded.coroutine ~= nil)
+
 local gpu = component.list("gpu")()
 local screen = component.list("screen")()
 
@@ -197,19 +199,24 @@ end
 
 ramfs.remove = function(path)
 	path = fixPath(path)
+	local succ = true
 
 	if ramfs[path] then
 		if ramfs.isDirectory(path) then
 			local children = ramfs.list(path)
 			for i,v in ipairs(children) do
-				ramfs.remove(path .. "/" .. v)
+				if not ramfs.remove(path .. "/" .. v) then succ = false end
 			end
 
 			ramfs[path] = nil
 		else
 			ramfs[path] = nil
 		end
+	else
+		succ = false
 	end
+
+	return succ
 end
 
 printMsg("Adding ramfs to components...")
@@ -309,7 +316,22 @@ end
 printMsg("Making usertab...")
 
 local usertab = [["admin" "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=" 0]]
+-- ^ this is a constant string because loading the base64 & sha256 libaries is extra work for no reason
 ramfs["/os/etc/usertab"] = usertab
+
+local coroutine = coroutine
+
+if is_openos then
+	printMsg("Completely bypassing all of OpenOS's security to get the actual coroutine table...")
+
+	local process = require("process")
+
+	for k,v in pairs(process.list) do
+		if v.command == "init" and v.path == "/init.lua" then
+			coroutine = v.data.coroutine_handler
+		end
+	end
+end
 
 printMsg("Setting up an environment...")
 local environment
@@ -319,6 +341,8 @@ environment = setmetatable({}, {
 			return computer
 		elseif idx == "component" then
 			return component
+		elseif idx == "coroutine" then
+			return coroutine
 		elseif idx == "_G" then
 			return environment
 		else
