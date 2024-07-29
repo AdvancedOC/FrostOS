@@ -31,6 +31,8 @@ local function internet_download(proc, address)
 		if data then fulldata = fulldata .. data else break end
 	end
 
+	request.close()
+
 	return fulldata
 end
 

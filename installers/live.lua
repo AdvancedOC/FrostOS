@@ -1,4 +1,4 @@
--- this installer tries to make a live environment in the tmpfs
+-- this installer tries to make a live environment in the ram
 
 local component = component or require("component") -- support OpenOS because why the heck not
 local computer = computer or require("computer")
@@ -14,11 +14,13 @@ component.invoke(gpu, "setResolution", w, h)
 
 local y = 1
 local function printMsg(msg)
-	if y == h then
+	if y == h+1 then
 		component.invoke(gpu, "copy", 1,2,w,h-1,0,-1)
 	end
 
-	component.invoke(gpu, "set", 1, y, msg .. string.rep(" ",w-#msg))
+	component.invoke(gpu, "set", 1, math.min(h,y), msg .. string.rep(" ",w-#msg))
+
+	if y < h+1 then y = y + 1 end
 end
 
 local internetcard = component.list("internet")()
@@ -78,7 +80,7 @@ ramfs.makeDirectory = function(path)
 	path = fixPath(path)
 	local segs = string.split(path,"/")
 
-	local cur = "/"
+	local cur = ""
 	for i = 1,#segs-1 do
 		cur = cur .. segs[i]
 		if not ramfs[cur] then ramfs[cur] = true end
@@ -98,6 +100,7 @@ ramfs.isDirectory = function(path)
 end
 
 ramfs.open = function(path,mode)
+	mode = mode or "r"
 	path = fixPath(path)
 
 	if string.contains(mode,"r") and type(ramfs[path]) ~= "string" then return nil end
@@ -115,9 +118,10 @@ end
 
 ramfs.read = function(handle, amount)
 	handle.i = handle.i or 1
+	amount = math.min(amount,#ramfs[handle.path] - handle.i + 1)
 
 	if handle.i <= #ramfs[handle.path] then
-		local data = ramfs[handle.path]:sub(handle.i,handle.i+amount)
+		local data = ramfs[handle.path]:sub(handle.i,handle.i+amount - 1)
 		handle.i = handle.i + amount
 		return data
 	end
@@ -164,6 +168,7 @@ ramfs.list = function(path)
 
 	local parts = string.split(path,"/")
 
+	-- error(path .. "   " .. tostring(ramfs[path]))
 
 	if ramfs[path] ~= true then
 		return {}
@@ -232,12 +237,14 @@ function component.list(filter, exact)
 	local vals = cl(filter,exact)
 
 	if exact and filter == "filesystem" then
-		vals[#vals+1] = ramfsUUID
+		vals[ramfsUUID] = "filesystem"
 	elseif (not exact) and string.contains("filesystem", filter) then
-		vals[#vals+1] = ramfsUUID
+		vals[ramfsUUID] = "filesystem"
 	elseif (not exact) and #filter == 0 then
-		vals[#vals+1] = ramfsUUID
+		vals[ramfsUUID] = "filesystem"
 	end
+
+	return vals
 end
 
 printMsg("Making sure the computer knows it's booting off of the ramfs...")
@@ -245,7 +252,9 @@ printMsg("Making sure the computer knows it's booting off of the ramfs...")
 function computer.getBootAddress() return ramfsUUID end -- make sure to use this one
 
 local function downloadFile(url)
-	local request = component.invoke(internetcard, "request", url)
+	local request,err = component.invoke(internetcard, "request", url)
+
+	if not request then error(err) end
 
 	local succ,err = pcall(request.finishConnect)
 
@@ -259,10 +268,13 @@ local function downloadFile(url)
 		if data then fulldata = fulldata .. data else break end
 	end
 
+	request.close()
+
 	return fulldata
 end
 
 local function downloadFileAndWrite(url,path)
+	path = fixPath(path)
 	local data = downloadFile(url)
 
 	ramfs[path] = data -- i could do handles and everything but like... why not just this
@@ -284,7 +296,7 @@ for i, line in ipairs(lines) do
 		local filepath = line:sub(6)
 
 		printMsg("Downloading file " .. filepath)
-		downloadFileAndWrite(repo .. filepath)
+		downloadFileAndWrite(repo .. filepath, filepath)
 	elseif string.startswith(line, "directory ") then
 		local dirpath = line:sub(11)
 
@@ -299,10 +311,39 @@ printMsg("Making usertab...")
 local usertab = [["admin" "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=" 0]]
 ramfs["/os/etc/usertab"] = usertab
 
+printMsg("Setting up an environment...")
+local environment
+environment = setmetatable({}, {
+	__index = function(tab,idx)
+		if idx == "computer" then
+			return computer
+		elseif idx == "component" then
+			return component
+		elseif idx == "_G" then
+			return environment
+		else
+			return _G[idx]
+		end
+	end,
+	__newindex = function(tab,idx,val)
+		_G[idx] = val
+	end
+})
+
+local oload = load
+function load(a,b,c,env)
+	env = env or environment
+	return oload(a,b,c,env)
+end
+
 printMsg("Trying to boot FrostOS...")
 
 local initfiledata = ramfs["/init.lua"]
 
-local loaded = load(initfiledata,"=init.lua")
+local loaded,err = load(initfiledata,"=init.lua","bt",environment)
 
-return loaded()
+if not loaded then error(err) end
+
+loaded()
+
+-- return loaded()
