@@ -2,7 +2,7 @@ local args = ...
 local syscalls = require("syscalls")
 local term = require("term")
 
-local repository = "https://raw.githubusercontent.com/Blendi-Goose/FrostOS"
+local repository = "https://raw.githubusercontent.com/AdvancedOC/FrostOS"
 local branch = args[1] or "main"
 
 local url = repository .. "/" .. branch

@@ -2,7 +2,6 @@ function string.escape_pattern(text)
 	return text:gsub("([^%w])", "%%%1")
 end
 
-
 function string.contains(s, sub)
 	return string.find(s, sub, nil, true) ~= nil
 end

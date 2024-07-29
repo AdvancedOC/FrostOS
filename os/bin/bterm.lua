@@ -192,14 +192,14 @@ local function doEscape()
 			wid = wid - x
 		else
 			sx = sx - x
-			wid = wid - math.abs(x)
+			wid = wid + x
 		end
 
 		if y >= 0 then
 			hei = hei - y
 		else
 			sy = sy - y
-			hei = hei - math.abs(y)
+			hei = hei + y
 		end
 
 		syscalls.graphics_copy(sx,sy,wid,hei,x,y)

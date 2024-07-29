@@ -1,4 +1,4 @@
-local repository = "https://raw.githubusercontent.com/Blendi-Goose/FrostOS/main"
+local repository = "https://raw.githubusercontent.com/AdvancedOC/FrostOS/main"
 
 local component = require("component")
 local computer = require("computer")
