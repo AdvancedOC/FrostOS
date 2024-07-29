@@ -3,7 +3,7 @@
 local component = component or require("component") -- support OpenOS because why the heck not
 local computer = computer or require("computer")
 
-local is_openos = (package.loaded.coroutine ~= nil)
+local is_openos = (package ~= nil and package.loaded.coroutine ~= nil)
 
 local gpu = component.list("gpu")()
 local screen = component.list("screen")()
