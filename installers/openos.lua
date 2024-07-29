@@ -141,14 +141,20 @@ end
 local usertab = ""
 local users = {}
 
+local term = require("term")
+
 print("Create Administrator user")
 local name = "admin"
 local password
 while true do
 	io.write("Password: ")
-	password = io.read("l")
+	password = term.read({pwchar = "*"})
+	io.write("\n") -- for some reason openos decides not to add a newline after a term.read
+	password = password:sub(1,#password-1) -- yet, it still gives a newline character i need to get rid of
 	io.write("Password (again): ")
-	local pass2 = io.read("l")
+	local pass2 = term.read({pwchar = "*"})
+	io.write("\n") -- same thing
+	pass2 = pass2:sub(1,#pass2-1)
 	if password == pass2 then break end
 	print("Passwords don't match! Try again.")
 end
@@ -158,15 +164,20 @@ table.insert(users, {name = name, password = password})
 while true do
 	print("Create another user:")
 	io.write("Name (empty to cancel): ")
-	local name = io.read("l")
+	local name = term.read() -- we have to use term.read because for some damn reason it doesn't reset pwchar on its own
+	name = name:sub(1,#name-1) -- this time, it does print a newline, because there isn't a pwchar, but, it still adds the newline to the return val
 	if #name == 0 then break end
 
 	local password
 	while true do
 		io.write("Password: ")
-		password = io.read("l")
+		password = term.read({pwchar = "*"})
+		io.write("\n") -- you know already
+		password = password:sub(1,#password-1)
 		io.write("Password (again): ")
-		local pass2 = io.read("l")
+		local pass2 = term.read({pwchar = "*"})
+		io.write("\n")
+		pass2 = pass2:sub(1,#pass2-1)
 		if password == pass2 then break end
 		print("Passwords don't match! Try again.")
 	end
