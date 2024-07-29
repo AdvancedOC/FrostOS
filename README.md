@@ -16,5 +16,5 @@ These commands work by moding the symtab file.
 
 If you're running OpenOS, simply run this command:
 ```
-wget https://raw.githubusercontent.com/Blendi-Goose/FrostOS/main/installers/openos.lua frostOSInstaller.lua; frostOSInstaller.lua
+wget https://raw.githubusercontent.com/Blendi-Goose/FrostOS/main/installers/openos.lua /tmp/frostOSInstaller.lua; /tmp/frostOSInstaller.lua
 ```
