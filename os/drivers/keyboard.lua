@@ -132,12 +132,13 @@ keys.numpadequals    = 0x8D
 
 local aliases = {
 	shift = "lshift",
-	backspace = "back"
+	backspace = "back",
+	control = "lcontrol"
 }
 
 local invkeys = {} -- inverse lookup table because memory usage can suck my dick
 
-if MemoryConservative then
+if MemoryConservative then -- performance vs ram usage tradeoff
 	invkeys = setmetatable(invkeys,{
 		__index = function (tab,k)
 			for k2,v in pairs(keys) do
@@ -149,8 +150,6 @@ else
 	for k,v in pairs(keys) do invkeys[v] = k end
 end
 
-
-
 local downkeys = {}
 
 local justpressed = {}
@@ -158,12 +157,12 @@ local justreleased = {}
 
 local function keyPressed(keyboardAddr, char, code, playerName)
 	downkeys[code] = true
-	justpressed[code] = true
+	justpressed[code] = computer.uptime()
 end
 
 local function keyReleased(keyboardAddr, char, code, playerName)
 	downkeys[code] = false
-	justreleased[code] = true
+	justreleased[code] = computer.uptime()
 end
 
 -- local function clipboardThing(keyboardAddr, value, playerName)
@@ -231,7 +230,14 @@ local function isKeyPressed(proc,key)
 	if type(actkey) == "string" then actkey = getKey(nil, actkey) end
 
 
-	if justpressed[actkey] then justpressed[actkey] = nil return true end
+	if justpressed[actkey] then
+		local timePressed = justpressed[actkey]
+		local curTime = computer.uptime()
+		justpressed[actkey] = nil
+		if curTime-timePressed < 0.2 then
+			return true
+		end
+	end
 
 	return false
 end
@@ -251,7 +257,14 @@ local function isKeyReleased(proc,key)
 
 	if type(actkey) == "string" then actkey = getKey(nil, actkey) end
 
-	if justreleased[actkey] then justreleased[actkey] = nil return true end
+	if justreleased[actkey] then
+		local timePressed = justreleased[actkey]
+		local curTime = computer.uptime()
+		justreleased[actkey] = nil
+		if curTime-timePressed < 0.2 then
+			return true
+		end
+	end
 
 	return false
 end

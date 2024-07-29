@@ -69,6 +69,7 @@ end
 
 local inEscape = false
 local escapeBuffer = ""
+local escapeRet
 local inputChar
 
 local function doEscape()
@@ -157,6 +158,54 @@ local function doEscape()
 		inputChar = escapeBuffer:sub(2)
 		return
 	end
+	if escapeBuffer == "W" then
+		escapeRet = tostring(w)
+		return
+	end
+	if escapeBuffer == "H" then
+		escapeRet = tostring(h)
+		return
+	end
+	if escapeBuffer:sub(1, 1) == "G" then
+		local parts = string.split(escapeBuffer:sub(2), ";")
+
+		local x,y = tonumber(parts[1]),tonumber(parts[2])
+
+		if not x or not y then return end
+
+		if x < 1 or y < 1 or x > w or y > h then escapeRet = " " return end
+
+		escapeRet = (syscalls.graphics_get(x, y, 1))
+		return
+	end
+	if escapeBuffer:sub(1, 1) == "S" then
+		local parts = string.split(escapeBuffer:sub(2), ";")
+
+		local x,y = tonumber(parts[1]),tonumber(parts[2])
+
+		if not x or not y then return end
+
+		local sx,sy = 1,1
+		local wid,hei = w,h
+
+		if x >= 0 then
+			wid = wid - x
+		else
+			sx = sx - x
+			wid = wid - math.abs(x)
+		end
+
+		if y >= 0 then
+			hei = hei - y
+		else
+			sy = sy - y
+			hei = hei - math.abs(y)
+		end
+
+		syscalls.graphics_copy(sx,sy,wid,hei,x,y)
+
+		return
+	end
 end
 
 local inputBuffer = ""
@@ -165,9 +214,6 @@ local function writeChar(char)
 
 	-- For evil hack
 	if char == "" then return end
-
-	-- TODO: somehow handle the nighmareish state machine
-	-- That will be terminal escape codes
 
 	if inEscape then
 		if char == "\x1B" then
@@ -262,7 +308,11 @@ local function readInput(amount)
 	inputBuffer = inputBuffer:sub(amount+1)
 	return chunk
 end
-io.stdout = io.stream(writeOutput, function() return nil end, "w")
+io.stdout = io.stream(writeOutput, function()
+	local res = escapeRet
+	escapeRet = nil
+	return res
+end, "rw")
 io.stdout.buflimit = 0
 
 io.stdin = io.stream(function() return end, readInput, "r")
@@ -341,11 +391,3 @@ while true do
 
 	coroutine.yield()
 end
-
--- while true do
---	 -- io.write(io.stdout, "> ")
---	 -- local line = io.read(io.stdin, "l")
---	 -- print(line)
-
---	 coroutine.yield()
--- end

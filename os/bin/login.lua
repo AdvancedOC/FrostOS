@@ -91,12 +91,13 @@ local function phasuser(proc, user)
 end
 
 local function puser(proc)
-	proc.ring = 3 -- Bring back to userland
+	proc.ring = math.max(3,proc.ring) -- Bring back to userland, if allowed to
 end
 
 local function defineSyscalls(proc)
 	proc:defineSyscall("plogin", plogin)
 	proc:defineSyscall("puser", puser)
+	proc:defineSyscall("phasuser", phasuser)
 end
 
 table.insert(Kernel.AllDrivers, defineSyscalls)
@@ -104,8 +105,6 @@ local pid = process.current()
 defineSyscalls(Kernel.allProcs[pid])
 
 local loginRing = process.info(pid).ring
-
--- TODO: Parse users
 
 do
 	local usertabfile = io.open("os/etc/usertab", "r")
@@ -170,8 +169,6 @@ do
 		end
 	end
 end
-
--- TODO: Login
 
 local loggedInUser
 local passwordBuf = ""
@@ -240,7 +237,7 @@ do
 					-- Oh look, we logged in!
 					if users[loggedInUser].ring < loginRing then
 						-- Escape login's priviliges
-						syscalls.plogin(loggedInUser, passwordBuf)
+						if users[loggedInUser].ring < loginRing then syscalls.plogin(loggedInUser, passwordBuf) end
 					end
 					break
 				else
@@ -277,7 +274,7 @@ do
 					if credentialsMatch(user, "") then
 						-- Unsecured user, just log in
 						loggedInUser = user
-						syscalls.plogin(loggedInUser, "")
+						if users[user].ring < loginRing then syscalls.plogin(loggedInUser, "") end
 						break
 					else
 						-- We need a password
