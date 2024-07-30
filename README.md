@@ -6,7 +6,7 @@ It supports drivers, basic filesystem utilities and running commands.
 It also has a process-based model where there can be multiple process in a process tree (visible with ptree), which can each have multiple threads.
 It supports multiple users, with a login screen on boot, and running individual commands as the admin user using ``doas``.
 
-The important things missing is ability to install arbitrary software from a floppy disk.
+The important thing missing is ability to easily install arbitrary software from a floppy disk.
 
 # Custom Shells and Environments
 
