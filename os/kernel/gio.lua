@@ -6,10 +6,7 @@ gio = {}
 -- fstab cache
 local fstab = {}
 
-local symtab = {
-	['/usr/bin/sh.lua'] = '/os/bin/scute.lua',
-	['/usr/bin/env.lua'] = '/os/bin/bterm.lua',
-}
+local symtab = {}
 
 function gio.alldisks()
 	local iter = component.list('filesystem')
@@ -21,9 +18,10 @@ function gio.alldisks()
 end
 
 ---@return string?
-function gio.diskAddress(disk)
+function gio.diskAddress(disk, maxAddr)
+	maxAddr = maxAddr or 6
 	for label, addr in gio.alldisks() do
-		if label == disk or addr:sub(1,6) == disk then
+		if label == disk or addr:sub(1,maxAddr) == disk then
 			return label
 		end
 	end
@@ -120,7 +118,7 @@ function gio.resolveMount(mountpoint)
 	if string.startswith(mountpoint, "/mnt/") then
 		if string.contains(mountpoint:sub(6), "/") then
 			local disk, p = getPathInfo(mountpoint)
-			assert(p == "", "Very confusing pointpoint: " .. mountpoint)
+			assert(p == "", "Very confusing mountpoint: " .. mountpoint)
 			return disk
 		end
 		return gio.diskAddress(mountpoint:sub(6))
@@ -132,7 +130,7 @@ function gio.resolveMount(mountpoint)
 		mountpoint = symtab[mountpoint]
 	end
 	if not fstab[mountpoint] then return end
-	return gio.diskAddress(fstab[mountpoint])
+	return gio.diskAddress(fstab[mountpoint],36)
 end
 
 -- A file for the Kernel
@@ -522,4 +520,148 @@ function gio.pathType(path)
     end
     if path == "" then return "mount" end
     return component.invoke(driveID, "isDirectory", path) and "directory" or "file"
+end
+
+-- load the fstab and symtab
+do
+	local fstabhandle,err = gio.open("/os/etc/fstab", "r")
+	local fstabdata
+	if fstabhandle then
+		local buf = {}
+
+		while true do
+			local read = gio.read(fstabhandle,math.huge)
+
+			if read then
+				buf[#buf+1] = read
+			else
+				break
+			end
+		end
+
+		fstabdata = table.concat(buf)
+
+		if fstabdata then
+			local lines = string.split(fstabdata, "\n")
+
+			local buf = {}
+			local segments = {}
+			for i = 1,#lines do
+				local line = lines[i]
+				if #line > 0 then
+					local k = 1
+					while k <= #line do
+						local char = line:sub(k,k)
+
+						if char == '"' then
+							k = k + 1
+							local strstart = k
+							while line:sub(k,k) ~= '"' and line:sub(k,k) ~= "" do
+								k = k + 1
+							end
+
+							buf[#buf+1] = line:sub(strstart,k-1) -- k-1 because we're on the "
+						elseif char == " " then
+							segments[#segments+1] = table.concat(buf)
+							table.clear(buf)
+						else
+							local start = k
+							while line:sub(k,k) ~= '"' and line:sub(k,k) ~= " " and line:sub(k,k) ~= "" do
+								k = k + 1
+							end
+
+							k = k - 1 -- DO NOT skip the character after the bit of shit
+							buf[#buf+1] = line:sub(start,k)
+						end
+
+						k = k + 1
+					end
+
+					if #buf > 0 then segments[#segments+1] = table.concat(buf) table.clear(buf) end
+
+					if #segments < 2 then
+						log(tostring(segments[1]) .. " " .. tostring(segments[2]))
+						error("Invalid mount in fstab! What now?") -- TODO: make it not die completely
+					end
+
+					fstab[segments[1]] = segments[2]
+
+					table.clear(segments)
+				end
+			end
+		end
+	else
+		log(err)
+	end
+end
+do
+	local symtabhandle,err = gio.open("/os/etc/symtab", "r")
+	local symtabdata
+	if symtabhandle then
+		local buf = {}
+
+		while true do
+			local read = gio.read(symtabhandle,math.huge)
+
+			if read then
+				buf[#buf+1] = read
+			else
+				break
+			end
+		end
+
+		symtabdata = table.concat(buf)
+	else
+		log(err)
+	end
+
+	if symtabdata then
+		local lines = string.split(symtabdata, "\n")
+
+		local buf = {}
+		local segments = {}
+		for i = 1,#lines do
+			local line = lines[i]
+			if #line > 0 then
+				local k = 1
+				while k <= #line do
+					local char = line:sub(k,k)
+
+					if char == '"' then
+						k = k + 1
+						local strstart = k
+						while line:sub(k,k) ~= '"' and line:sub(k,k) ~= "" do
+							k = k + 1
+						end
+
+						buf[#buf+1] = line:sub(strstart,k-1) -- k-1 because we're on the "
+					elseif char == " " then
+						segments[#segments+1] = table.concat(buf)
+						table.clear(buf)
+					else
+						local start = k
+						while line:sub(k,k) ~= '"' and line:sub(k,k) ~= " " and line:sub(k,k) ~= "" do
+							k = k + 1
+						end
+
+						k = k - 1 -- DO NOT skip the character after the bit of shit
+						buf[#buf+1] = line:sub(start,k)
+					end
+
+					k = k + 1
+				end
+
+				if #buf > 0 then segments[#segments+1] = table.concat(buf) table.clear(buf) end
+
+				if #segments < 2 then
+					log(tostring(segments[1]) .. " " .. tostring(segments[2]))
+					error("Invalid link in symtab! What now?") -- TODO: make it not die completely
+				end
+
+				symtab[segments[1]] = segments[2]
+
+				table.clear(segments)
+			end
+		end
+	end
 end
