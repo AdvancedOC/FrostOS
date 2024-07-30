@@ -105,7 +105,11 @@ local diskless = load(disklessData, "=diskless.lua", "bt", environment)() -- not
 -- ^ diskless is running in the environment to make sure it can do its modifications to computer, component, etc
 
 printMsg("Making RamFS using diskless...")
-local ramfsUUID = diskless.makeRamFS(false, nil)
+
+local MiB = 1024^2
+local floppySize = MiB * 0.5 -- floppies have 0.5 MiB of space, we'll fake this size, to be as hidden as possible
+
+local ramfsUUID = diskless.makeRamFS(false, floppySize)
 
 local function downloadFileAndWrite(url, path)
 	local file = downloadFile(url)
