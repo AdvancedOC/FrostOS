@@ -224,7 +224,9 @@ end
 function which(command)
 	if builtin[command] then return builtin[command] end
 
-	local shellPath = "/usr/bin/?.lua:/usr/bin/?/init.lua:/os/bin/?.lua:/os/bin/?/init.lua:/mnt/?.lua:/mnt/?/init.lua"
+	local cwd = process.cwd()
+
+	local shellPath = "/usr/bin/?.lua:/usr/bin/?/init.lua:/os/bin/?.lua:/os/bin/?/init.lua:/mnt/?.lua:/mnt/?/init.lua:" .. cwd .. "/?.lua"
 	local shellConfig = "/\n:\n?\n"
 
 	return package.pathOf(command, shellConfig, shellPath)
