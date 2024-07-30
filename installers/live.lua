@@ -109,7 +109,7 @@ printMsg("Making RamFS using diskless...")
 local MiB = 1024^2
 local floppySize = MiB * 0.5 -- floppies have 0.5 MiB of space, we'll fake this size, to be as hidden as possible
 
-local ramfsUUID = diskless.makeRamFS(false, floppySize)
+local ramfsUUID = diskless.makeRamFS(false, floppySize, true)
 
 local function downloadFileAndWrite(url, path)
 	local file = downloadFile(url)
