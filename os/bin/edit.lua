@@ -235,8 +235,8 @@ while true do
 	elseif syscalls.keyboard_isKeyPressed("back") then
 		local line = lines[cy] or ""
 		if cx == 1 then
-			goUp(w, h)
 			table.remove(lines, cy)
+			goUp(w, h)
 		else
 			local pre = line:sub(1, cx-2)
 			local after = line:sub(cx)
