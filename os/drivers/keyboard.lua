@@ -192,7 +192,13 @@ local function isKeyDown(proc, key)
 	for i = 1,#segments do
 		local segment = segments[i]
 
-		if type(segment) == "string" then segment = getKey(nil, segment) end
+		if tonumber(segment) then
+			segment = tonumber(segment)
+		else
+			segment = getKey(nil, segment)
+		end
+
+		segment = segment or 0
 
 		if not downkeys[segment] then return false end
 	end
@@ -206,7 +212,13 @@ local function isKeyUp(proc, key)
 	for i = 1,#segments do
 		local segment = segments[i]
 
-		if type(segment) == "string" then segment = getKey(nil, segment) end
+		if tonumber(segment) then
+			segment = tonumber(segment)
+		else
+			segment = getKey(nil, segment)
+		end
+
+		segment = segment or 0
 
 		if downkeys[segment] then return false end
 	end
@@ -220,15 +232,26 @@ local function isKeyPressed(proc,key)
 	for i = 1,#segments-1 do
 		local segment = segments[i]
 
-		if type(segment) == "string" then segment = getKey(nil, segment) end
+		if tonumber(segment) then
+			segment = tonumber(segment)
+		else
+			segment = getKey(nil, segment)
+		end
+
+		segment = segment or 0
 
 		if not downkeys[segment] then return false end
 	end
 
 	local actkey = segments[#segments]
 
-	if type(actkey) == "string" then actkey = getKey(nil, actkey) end
+	if tonumber(actkey) then
+		actkey = tonumber(actkey)
+	else
+		actkey = getKey(nil, actkey)
+	end
 
+	actkey = actkey or 0
 
 	if justpressed[actkey] then
 		local timePressed = justpressed[actkey]
@@ -248,14 +271,26 @@ local function isKeyReleased(proc,key)
 	for i = 1,#segments-1 do
 		local segment = segments[i]
 
-		if type(segment) == "string" then segment = getKey(nil, segment) end
+		if tonumber(segment) then
+			segment = tonumber(segment)
+		else
+			segment = getKey(nil, segment)
+		end
+
+		segment = segment or 0
 
 		if not downkeys[segment] then return false end
 	end
 
 	local actkey = segments[#segments]
 
-	if type(actkey) == "string" then actkey = getKey(nil, actkey) end
+	if tonumber(actkey) then
+		actkey = tonumber(actkey)
+	else
+		actkey = getKey(nil, actkey)
+	end
+
+	actkey = actkey or 0
 
 	if justreleased[actkey] then
 		local timePressed = justreleased[actkey]

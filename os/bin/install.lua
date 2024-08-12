@@ -90,7 +90,7 @@ function InstallOS()
 	print("Computing Operating System structure...")
 	local structureBuffer = io.memory("", "rw")
 	local structureProc = process.spawn("Install: Find OS structure", {[0] = structureBuffer.fd})
-	local ok, err = process.exec(structureProc, "/os/bin/structure.lua", {"/", "-i", "/.git", "-i", "/installers", "-i", "/os_toinstall", "-i", "/tmp", "-i", "/mnt", "-i", "/os/etc/usertab", "-i", "/installers"})
+	local ok, err = process.exec(structureProc, "/os/bin/structure.lua", {"/", "-i", "/.git", "-i", "/installers", "-i", "/tmp", "-i", "/mnt", "-i", "/os/etc/usertab", "-i", "/installers", "-i", "/os/eeprom", "-i", "/os/eeprom_data"})
 	if not ok then print("Error: " .. err) return end
 	process.join(structureProc)
 	io.seek(structureBuffer, "set", 0)

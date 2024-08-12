@@ -304,7 +304,7 @@ repeat
 	coroutine.yield()
 until syscalls.computer_freeMemory() > 8*1024
 
-local env = "/os/bin/bterm.lua"
+local env = "/usr/bin/env.lua"
 
 log("Spawning environment process")
 local term, err = process.spawn("Environment " .. env, nil, extraStuff, extraStuff.HOME, math.min(2, users[loggedInUser].ring))

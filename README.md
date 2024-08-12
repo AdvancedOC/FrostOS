@@ -6,7 +6,7 @@ It supports drivers, basic filesystem utilities and running commands.
 It also has a process-based model where there can be multiple process in a process tree (visible with ptree), which can each have multiple threads.
 It supports multiple users, with a login screen on boot, and running individual commands as the admin user using ``doas``.
 
-The important things missing is ability to install arbitrary software from a floppy disk.
+The important thing missing is ability to easily install arbitrary software from a floppy disk.
 
 # Custom Shells and Environments
 
@@ -20,7 +20,7 @@ If you're running OpenOS, simply run this command to run the installer:
 ```
 wget https://raw.githubusercontent.com/AdvancedOC/FrostOS/main/installers/openos.lua /tmp/frostOSInstaller.lua; /tmp/frostOSInstaller.lua
 ```
-If you prefer to have a live environment to install from, you can use the live FrostOS environment inside OpenOS to install it.
+If you prefer to have a live environment to install from, you can use the live FrostOS environment inside OpenOS to install it. However, this is not recommended OpenOS's modifications to the system might cause crashes.
 This can be done by running:
 ```
 wget https://raw.githubusercontent.com/AdvancedOC/FrostOS/main/installers/live.lua /tmp/frostOSLive.lua; /tmp/frostOSLive.lua
