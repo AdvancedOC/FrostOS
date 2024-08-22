@@ -20,7 +20,7 @@ If you're running OpenOS, simply run this command to run the installer:
 ```
 wget https://raw.githubusercontent.com/AdvancedOC/FrostOS/main/installers/openos.lua /tmp/frostOSInstaller.lua; /tmp/frostOSInstaller.lua
 ```
-If you prefer to have a live environment to install from, you can use the live FrostOS environment inside OpenOS to install it. However, this is not recommended OpenOS's modifications to the system might cause crashes.
+If you prefer to have a live environment to install from, you can use the live FrostOS environment inside OpenOS to install it. However, this is not recommended because OpenOS's modifications to the system might cause crashes.
 This can be done by running:
 ```
 wget https://raw.githubusercontent.com/AdvancedOC/FrostOS/main/installers/live.lua /tmp/frostOSLive.lua; /tmp/frostOSLive.lua
